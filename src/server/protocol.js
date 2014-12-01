@@ -14,10 +14,12 @@ function lookup(next) {
 		
 		subscribers.forEach(function (channel) {
 			channel.send({
-				action: 'usage',
+				action: 'data',
 				data: {
-					cpu: result.cpu,
-					memory: result.memory
+					usage: {
+						cpu: result.cpu,
+						memory: result.memory
+					}
 				}
 			});
 		});
@@ -38,7 +40,9 @@ function lookupDelayed() {
 
 function start() {
 	started = true;
-	lookupDelayed();
+	lookup(function () {
+		if (started) { lookupDelayed(); }
+	});
 }
 function stop() {
 	started = false;

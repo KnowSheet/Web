@@ -18,7 +18,10 @@ module.exports = {
 		vendor: [
 			"jquery",
 			"underscore",
-			"node-event-emitter"
+			"node-event-emitter",
+			"d3",
+			"epoch-charting",
+			"epoch-charting-css"
 		]
 	},
 	module: {
@@ -30,16 +33,23 @@ module.exports = {
 			}
 		],
 		loaders: [
+			{ test: /\/d3\.min\.js$/i, loader: "imports-loader?this=>window!exports-loader?window.d3" },
+			{ test: /\/epoch\.min\.js$/i, loader: "imports-loader?this=>window!exports-loader?window.Epoch" },
+			
 			{ test: /\.json$/i, loader: "json-loader" },
 			{ test: /\.less$/i, loader: "style-loader!css-loader!less-loader" },
-			{ test: /\.(jpe?g|png|gif)$/i, loader: "file?name=[path][name].[ext]?[hash]" },
-			{ test: /\.(mp3|ac3|ogg|m4a)$/i, loader: "file?name=[path][name].[ext]?[hash]" },
-			{ test: /\.(ttf|woff|eot)$/i, loader: "file?name=[path][name].[ext]?[hash]" }
+			{ test: /\.css$/i, loader: "style-loader!css-loader" },
+			{ test: /\.(jpe?g|png|gif)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" },
+			{ test: /\.(mp3|ac3|ogg|m4a)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" },
+			{ test: /\.(ttf|woff|eot)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" }
 		]
 	},
 	resolve: {
 		alias: {
-			"jquery": path.join(__dirname, "node_modules/jquery/dist/jquery.js")
+			"jquery": path.join(__dirname, "node_modules/jquery/dist/jquery.js"),
+			"d3": path.join(__dirname, "node_modules/epoch-charting/node_modules/d3/d3.min.js"),
+			"epoch-charting": path.join(__dirname, "node_modules/epoch-charting/epoch.min.js"),
+			"epoch-charting-css": path.join(__dirname, "node_modules/epoch-charting/epoch.min.css")
 		},
 		extensions: ["", ".js"]
 	},

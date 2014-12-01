@@ -1,7 +1,12 @@
 var Channel = require('./channel');
+var Dashboard = require('./dashboard');
 var console = global.console;
 
 console.log('App loaded ' + (new Date()));
+
+
+var dashboard = new Dashboard();
+
 
 // TODO: Maybe build the WebSocket endpoint URL from the same config as on the server-side (?).
 var channelUrl = 'ws://localhost:3002';
@@ -28,8 +33,8 @@ var channel = new Channel({
 	.on('message', function (channel, message) {
 		console.info('Channel received message:', message);
 		
-		if (message.action === 'usage') {
-			console.log('CPU usage: ' + message.data.cpu + ', memory usage: ' + message.data.memory);
+		if (message.action === 'data') {
+			dashboard.accept(message.data);
 		}
 	})
 	.on('transport-error', function (channel, error) {
