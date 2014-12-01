@@ -1,0 +1,9 @@
+{
+  "strict":    false,
+  "eqeqeq":    true,
+  "newcap":    false,
+  "undef":     true,
+  "unused":    false,
+  "onecase":   true,
+  "lastsemic": true
+}
