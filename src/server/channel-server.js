@@ -21,8 +21,9 @@ function ChannelServer(options) {
 	 * @property
 	 */
 	_this.protocol = {
+		setup: function () {},
 		receive: function () {},
-		cleanup: function () {}
+		teardown: function () {}
 	};
 	
 	// Apply the property values passed to the constructor:
@@ -40,6 +41,8 @@ function ChannelServer(options) {
 	
 		channel.on('connected', function (channel) {
 			logger.info('Channel connected.');
+			
+			_this.protocol.setup(channel);
 			
 			_this.emit('channel-connected', _this, channel);
 		});
@@ -61,7 +64,7 @@ function ChannelServer(options) {
 		channel.on('disconnected', function (channel) {
 			logger.info('Channel disconnected.');
 			
-			_this.protocol.cleanup(channel);
+			_this.protocol.teardown(channel);
 		});
 	
 		channel.accept(ws);

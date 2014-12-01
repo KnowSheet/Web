@@ -50,6 +50,8 @@ function stop() {
  * Receives messages and responds to them.
  */
 module.exports = {
+	setup: function (channel) {
+	}, 
 	receive: function (channel, message) {
 		switch (message.action) {
 		case 'hello':
@@ -64,7 +66,7 @@ module.exports = {
 			break;
 		}
 	},
-	cleanup: function (channel) {
+	teardown: function (channel) {
 		var index = subscribers.indexOf(channel);
 		subscribers.splice(index, 1);
 		if (subscribers.length === 0) {
