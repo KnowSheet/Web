@@ -5,7 +5,7 @@
   "author": "",
   "license": "MIT",
   "scripts": {
-    "dev": "echo \"Starting development...\\n\" && node ./node_modules/gulp/bin/gulp.js webpack-dev-server --open",
+    "dev": "echo \"Starting development...\\n\" && NODE_ENV=development node index.js",
     "build": "echo \"Building with webpack...\\n\" && node ./node_modules/webpack/bin/webpack.js && echo \"\\nDone ($?).\";",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
