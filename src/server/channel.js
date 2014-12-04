@@ -33,17 +33,11 @@ _.extend(Channel.prototype, {
 		
 		if (!ws) { throw new Error(__filename + ': Argument "ws" is empty.'); }
 		
+		_this._closed = false;
+		
 		_this.emit('connecting', _this);
 		
-		_this._ws = ws;
-		
-		ws.on('message', function (data) {
-			_this.receive(data);
-		});
-
-		ws.on('close', function () {
-			_this.emit('disconnected', _this);
-		});
+		_this._acceptSocket(ws);
 		
 		_this.emit('connected', _this);
 	},
@@ -70,19 +64,21 @@ _.extend(Channel.prototype, {
 			_this.emit('message', _this, message);
 		}
 		catch (ex) {
-			ex.data = data;
-			_this.emit('transport-error', _this, { message: ex.message });
+			var error = new Error(ex.message);
+			error.inner = ex;
+			error.data = data;
+			_this.emit('error', _this, error);
 		}
 	},
 	
 	close: function () {
 		var _this = this;
 		
-		if (!_this._ws) { throw new Error(__filename + ': No socket.'); }
+		if (_this._closed) { return; }
 		
-		_this.emit('disconnecting', _this);
+		_this._closed = true;
 		
-		_this._ws = null;
+		_this._destroySocket();
 		
 		_this.emit('disconnected', _this);
 	},
@@ -101,6 +97,44 @@ _.extend(Channel.prototype, {
 	
 	deserializeMessage: function (data) {
 		return JSON.parse(data);
+	},
+	
+	_acceptSocket: function (ws) {
+		var _this = this;
+		
+		_this._ws = ws;
+		
+		ws.on('message', _this._onMessageListener = function (data) {
+			_this.receive(data);
+		});
+
+		ws.on('close', _this._onCloseListener = function () {
+			_this._destroySocket();
+			
+			_this.emit('disconnected', _this);
+		});
+		
+		ws.on('error', _this._onErrorListener = function (error) {
+			_this.emit('error', _this, error);
+		});
+	},
+	_destroySocket: function () {
+		var _this = this;
+		
+		var ws = _this._ws;
+		_this._ws = null;
+		
+		if (ws) {
+			ws.removeListener('message', _this._onMessageListener);
+			ws.removeListener('close', _this._onCloseListener);
+			ws.removeListener('error', _this._onErrorListener);
+			
+			_this._onMessageListener = null;
+			_this._onCloseListener = null;
+			_this._onErrorListener = null;
+			
+			ws.close();
+		}
 	}
 });
 

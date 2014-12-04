@@ -63,7 +63,7 @@ _.extend(Channel.prototype, {
 		
 		if (_this._ws) { throw new Error(__filename + ': Socket exists, close first.'); }
 		
-		_this._reconnectReset();
+		_this._closed = false;
 		
 		_this.emit('connecting', _this);
 		
@@ -94,21 +94,23 @@ _.extend(Channel.prototype, {
 			_this.emit('message', _this, message);
 		}
 		catch (ex) {
-			ex.data = data;
-			_this.emit('transport-error', _this, ex);
+			var error = new Error(ex.message);
+			error.inner = ex;
+			error.data = data;
+			_this.emit('error', _this, error);
 		}
 	},
 	
 	close: function () {
 		var _this = this;
 		
-		if (!_this._ws) { throw new Error(__filename + ': No socket.'); }
+		if (_this._closed) { return; }
 		
-		_this._reconnectReset();
-		
-		_this.emit('disconnecting', _this);
+		_this._closed = true;
 		
 		_this._destroySocket();
+		
+		_this.emit('disconnected', _this);
 	},
 	
 	extendMessage: function (message) {
@@ -146,36 +148,34 @@ _.extend(Channel.prototype, {
 	_createSocket: function () {
 		var _this = this;
 		
-		var ws = new WebSocket(_this.url);
+		_this._acceptSocket(new WebSocket(_this.url));
+	},
+	_acceptSocket: function (ws) {
+		var _this = this;
 		
 		_this._ws = ws;
 		
 		ws.onopen = function () {
+			_this._reconnectReset();
+			
 			_this.emit('connected', _this);
 		};
-		ws.onclose = function (e) {
-			_this.emit('disconnected', _this);
+		ws.onclose = function (event) {
+			_this._reconnectCancel();
 			
 			_this._destroySocket();
 			
-			if (e.wasClean) {
-				_this._reconnectReset();
-			}
-			else {
+			_this.emit('disconnected', _this);
+			
+			if (!event.wasClean && !_this._closed) {
 				_this._reconnectSchedule();
 			}
 		};
-		ws.onmessage = function (e) {
-			_this.receive(e.data);
+		ws.onmessage = function (event) {
+			_this.receive(event.data);
 		};
 		ws.onerror = function () {
-			if (ws.readyState === ws.CLOSING || ws.readyState === ws.CLOSED) {
-				_this._destroySocket();
-				_this._reconnectSchedule();
-			}
-			else {
-				_this.emit('transport-error', _this, new Error());
-			}
+			_this.emit('error', _this, new Error());
 		};
 	},
 	
@@ -191,9 +191,10 @@ _.extend(Channel.prototype, {
 		var _this = this;
 		
 		_this._reconnectCancel();
-		_this._destroySocket();
 		
 		_this._reconnectTimer = setTimeout(function () {
+			if (_this._closed) { return; }
+			
 			_this.emit('reconnecting', _this);
 			
 			_this._createSocket();

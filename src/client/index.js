@@ -28,17 +28,17 @@ var channel = new Channel({
 		console.log('Channel has disconnected from "' + channel.url + '".');
 	})
 	.on('sent', function (channel, message) {
-		console.info('Channel sent message:', message);
+		console.info('Channel sent a message:', message);
 	})
 	.on('message', function (channel, message) {
-		console.info('Channel received message:', message);
+		console.info('Channel received a message:', message);
 		
 		if (message.action === 'data') {
 			dashboard.accept(message.data);
 		}
 	})
-	.on('transport-error', function (channel, error) {
-		console.error('Channel error occurred:', error);
+	.on('error', function (channel, error) {
+		console.error('Channel got an error:', error);
 	})
 	.on('reconnect-scheduled', function (channel) {
 		console.log('Channel will reconnect in ' + channel.reconnectDelay + 'ms.');

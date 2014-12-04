@@ -48,17 +48,17 @@ function ChannelServer(options) {
 		});
 	
 		channel.on('sent', function (channel, message) {
-			logger.info('Channel message sent: %j', { message: message }, {});
+			logger.info('Channel sent a message: %j', { message: message }, {});
 		});
 	
 		channel.on('message', function (channel, message) {
-			logger.info('Channel message received: %j', { message: message }, {});
+			logger.info('Channel received a message: %j', { message: message }, {});
 		
 			_this.protocol.receive(channel, message);
 		});
 
-		channel.on('transport-error', function (channel, error) {
-			logger.error('Channel transport error: %j', { error: error }, {});
+		channel.on('error', function (channel, error) {
+			logger.error('Channel got an error: %j', { error: error }, {});
 		});
 
 		channel.on('disconnected', function (channel) {
