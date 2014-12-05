@@ -14,11 +14,13 @@ function lookup(next) {
 		
 		subscribers.forEach(function (channel) {
 			channel.send({
-				action: 'data',
-				data: {
-					usage: {
-						cpu: result.cpu,
-						memory: result.memory
+				action: 'update',
+				payload: {
+					cpu: {
+						data: [ result.cpu ],
+					},
+					memory: {
+						data: [ result.memory ]
 					}
 				}
 			});

@@ -1,9 +1,12 @@
+var $ = require('jquery');
 var Channel = require('./channel');
 var Dashboard = require('./dashboard');
 var console = global.console;
 
 console.log('App loaded ' + (new Date()));
 
+
+$(global).on('load', function () {
 
 var dashboard = new Dashboard();
 
@@ -33,8 +36,10 @@ var channel = new Channel({
 	.on('message', function (channel, message) {
 		console.info('Channel received a message:', message);
 		
-		if (message.action === 'data') {
-			dashboard.accept(message.data);
+		switch (message.action) {
+			case 'update':
+				dashboard.updateCharts(message.timestamp, message.payload);
+				break;
 		}
 	})
 	.on('error', function (channel, error) {
@@ -48,3 +53,5 @@ var channel = new Channel({
 	});
 
 channel.open();
+
+});
