@@ -10,6 +10,10 @@ var setTimeout = global.setTimeout;
 require('./dashboard.less');
 
 
+var CHART_DATA_DEFAULT_TTL = 10;
+var SERIES_DATA_DEFAULT_TTL = 30;
+
+
 function Dashboard(options) {
 	EventEmitter.call(this);
 	
@@ -31,120 +35,22 @@ function Dashboard(options) {
 	$(global).on('resize orientationchange', _.throttle(function () {
 		_this._resizeLayout();
 	}, 10));
-	
-	_this.loadLayout();
 }
 inherits(Dashboard, EventEmitter);
 _.extend(Dashboard.prototype, {
-	loadLayout: function () {
+	updateLayout: function (layout) {
 		var _this = this;
 		
-		if (_this._layoutLoading) { return; }
+		_this._layout = layout || {};
 		
-		_this._layoutLoading = true;
-		_this._layoutPrevious = _this._layout;
-		_this._layout = {
-			col: [
-				{
-					cell: {
-						header: {
-							text: 'Loading layout...'
-						}
-					}
-				}
-			]
-		};
+		_this._copyDataToLayout();
+		
 		_this._renderLayout();
-		
-		var deferred = $.Deferred();
-		
-		deferred
-			.then(function (layout) {
-				_this._layout = layout;
-				_this._layoutLoading = false;
-				
-				_this._renderLayout();
-			}, function (error) {
-				_this._layout = _this._layoutPrevious;
-				_this._layoutLoading = false;
-				
-				_this._renderLayout();
-				
-				if (global.confirm('An error occurred while loading the layout. Try again?')) {
-					_this.loadLayout();
-				}
-			});
-		
-		setTimeout(function () {
-			
-			// TODO: Request the layout from the server-side.
-			var layout = {
-				col: [
-					{
-						row: [
-							{
-								cell: {
-									header: {
-										text: 'CPU Load'
-									},
-									chart: {
-										seriesId: 'cpu',
-										color: 'blue',
-										min: 0.0,
-										max: 1.0,
-										ttl: 10
-									}
-								}
-							},
-							{
-								cell: {
-									header: {
-										text: 'Memory Footprint'
-									},
-									chart: {
-										seriesId: 'memory',
-										min: 0.0,
-										max: 1.0,
-										ttl: 10
-									}
-								}
-							}
-						]
-					},
-					{
-						row: [
-							{
-								cell: {
-									header: {
-										text: 'CPU Load copy'
-									},
-									chart: {
-										seriesId: 'cpu',
-										color: 'red',
-										min: 0.0,
-										max: 1.0,
-										ttl: 20
-									}
-								}
-							}
-						]
-					}
-				]
-			};
-			
-			deferred.resolve(layout);
-			
-		}, 2000);
 	},
 	
-	updateCharts: function (timestamp, updates) {
+	updateCharts: function (updates) {
 		var _this = this,
-			layout = _this._layout,
-			SERIES_DATA_DEFAULT_TTL = 30;
-		
-		function mapper(value) {
-			return { x: Math.floor(timestamp / 1000), y: value };
-		}
+			layout = _this._layout;
 		
 		for (var seriesId in updates) { if (updates.hasOwnProperty(seriesId)) {
 			var update = updates[seriesId];
@@ -153,47 +59,20 @@ _.extend(Dashboard.prototype, {
 				series.data = series.data || [];
 				series.ttl = update.ttl || series.ttl || SERIES_DATA_DEFAULT_TTL;
 				
-				var updateData = update.data.map(mapper);
+				var updateData = update.data;
 				
 				var seriesData = series.data;
+				
 				seriesData.push.apply(seriesData, updateData);
 				
+				// Forget old data:
 				while ((seriesData[seriesData.length-1].x - seriesData[0].x) > series.ttl) {
 					seriesData.shift();
 				}
 			}
 		} }
 		
-		_this._traverseLayout(layout, {},
-			null,
-			function (ctx, layout, item, cell) {
-				if (cell && cell.chart && cell.chart.graph) {
-					var series = _this._series[cell.chart.seriesId];
-					if (series) {
-						var seriesData = series.data;
-						
-						var chartData = cell.chart.data;
-						
-						var selectedData = [],
-							ic = seriesData.length,
-							i = ic-1;
-						
-						while (i >= 0 && (seriesData[ic-1].x - seriesData[i].x) <= cell.chart.ttl) {
-							selectedData.unshift(seriesData[i]);
-							--i;
-						}
-						
-						// Note: Update chart data in-place because our graph has a reference to it:
-						chartData.splice.apply(chartData, [ 0, chartData.length ].concat(selectedData));
-						
-						_this._stubChartData(chartData, cell.chart.ttl);
-						
-						cell.chart.graph.render();
-					}
-				}
-			},
-			null
-		);
+		_this._copyDataToLayout();
 	},
 	
 	_traverseLayout: function (layout, ctx, beforeFn, itemFn, afterFn) {
@@ -265,9 +144,11 @@ _.extend(Dashboard.prototype, {
 
 						$chart.appendTo($chartWrapper);
 						
+						var series = _this._series[cell.chart.seriesId] || {};
 						var chartData = cell.chart.data = cell.chart.data || [];
+						var chartTtl = cell.chart.ttl || series.ttl || CHART_DATA_DEFAULT_TTL;
 						
-						_this._stubChartData(chartData, cell.chart.ttl);
+						_this._stubChartData(chartData, chartTtl);
 						
 						var graph = cell.chart.graph = new Rickshaw.Graph({
 							element: $chart[0],
@@ -295,7 +176,7 @@ _.extend(Dashboard.prototype, {
 							graph: graph,
 							ticksTreatment: ticksTreatment,
 							timeUnit: {
-								seconds: Math.ceil(cell.chart.ttl / 5),
+								seconds: Math.ceil(chartTtl / 5),
 								formatter: function (d) {
 									return moment(d).format('HH:mm:ss');
 								}
@@ -316,6 +197,46 @@ _.extend(Dashboard.prototype, {
 		);
 		
 		_this._resizeLayout();
+	},
+	
+	_copyDataToLayout: function () {
+		var _this = this,
+			layout = _this._layout;
+		
+		_this._traverseLayout(layout, {},
+			null,
+			function (ctx, layout, item, cell) {
+				if (cell && cell.chart) {
+					var series = _this._series[cell.chart.seriesId];
+					if (series) {
+						var seriesData = series.data;
+						
+						var chartData = cell.chart.data = cell.chart.data || [];
+						var chartTtl = cell.chart.ttl || series.ttl || CHART_DATA_DEFAULT_TTL;
+						
+						var selectedData = [],
+							ic = seriesData.length,
+							i = ic-1;
+						
+						// Add new data:
+						while (i >= 0 && (seriesData[ic-1].x - seriesData[i].x) <= chartTtl) {
+							selectedData.unshift({ x: seriesData[i].x, y: seriesData[i].y });
+							--i;
+						}
+						
+						// Note: Update chart data in-place because our graph has a reference to it:
+						chartData.splice.apply(chartData, [ 0, chartData.length ].concat(selectedData));
+						
+						_this._stubChartData(chartData, chartTtl);
+						
+						if (cell.chart.graph) {
+							cell.chart.graph.render();
+						}
+					}
+				}
+			},
+			null
+		);
 	},
 	
 	_resizeLayout: function () {
@@ -346,7 +267,7 @@ _.extend(Dashboard.prototype, {
 	},
 	
 	_stubChartData: function (chartData, ttl) {
-		var nowX = Math.floor((new Date()).getTime() / 1000);
+		var nowX = ((new Date()).getTime() / 1000);
 		
 		if (chartData.length <= 0) {
 			chartData.push({
@@ -358,7 +279,7 @@ _.extend(Dashboard.prototype, {
 		
 		while ((chartData[chartData.length-1].x - chartData[0].x) < ttl) {
 			chartData.unshift({
-				x: chartData[0].x - 1, //< Minus one second.
+				x: chartData[0].x - 1, //< WARNING: Assuming a time-based data that comes each second, so we stub 1 second back.
 				y: 0,
 				stub: true
 			});

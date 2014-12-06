@@ -43,10 +43,10 @@ function lookup(next) {
 		
 		sendUpdates({
 			cpu: {
-				data: [ result.cpu / 100 ],
+				data: [ { x: Date.now() / 1000, y: result.cpu / 100 } ],
 			},
 			memory: {
-				data: [ osUtils.freemem() / osUtils.totalmem() ]
+				data: [ { x: Date.now() / 1000, y: osUtils.freemem() / osUtils.totalmem() } ]
 			}
 		});
 		next();
