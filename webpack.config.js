@@ -20,8 +20,8 @@ module.exports = {
 			"underscore",
 			"node-event-emitter",
 			"d3",
-			"epoch-charting",
-			"epoch-charting-css"
+			"rickshaw",
+			"rickshaw-css"
 		]
 	},
 	module: {
@@ -33,9 +33,6 @@ module.exports = {
 			}
 		],
 		loaders: [
-			{ test: /\/d3\.min\.js$/i, loader: "imports-loader?this=>window!exports-loader?window.d3" },
-			{ test: /\/epoch\.min\.js$/i, loader: "imports-loader?this=>window!exports-loader?window.Epoch" },
-			
 			{ test: /\.json$/i, loader: "json-loader" },
 			{ test: /\.less$/i, loader: "style-loader!css-loader!less-loader" },
 			{ test: /\.css$/i, loader: "style-loader!css-loader" },
@@ -47,9 +44,9 @@ module.exports = {
 	resolve: {
 		alias: {
 			"jquery": path.join(__dirname, "node_modules/jquery/dist/jquery.js"),
-			"d3": path.join(__dirname, "node_modules/epoch-charting/node_modules/d3/d3.min.js"),
-			"epoch-charting": path.join(__dirname, "node_modules/epoch-charting/epoch.min.js"),
-			"epoch-charting-css": path.join(__dirname, "node_modules/epoch-charting/epoch.min.css")
+			"d3": path.join(__dirname, "node_modules/d3/d3.js"),
+			"rickshaw": path.join(__dirname, "node_modules/rickshaw/rickshaw.js"),
+			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/rickshaw.css")
 		},
 		extensions: ["", ".js"]
 	},

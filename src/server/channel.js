@@ -87,7 +87,7 @@ _.extend(Channel.prototype, {
 		return _.extend({
 			timestamp: (new Date()).getTime(),
 			action: 'message',
-			data: {}
+			payload: {}
 		}, message);
 	},
 	

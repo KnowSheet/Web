@@ -2,7 +2,8 @@ var $ = require('jquery');
 var _ = require('underscore');
 var EventEmitter = require('node-event-emitter');
 var inherits = require('inherits');
-var Epoch = require('epoch-charting');
+var Rickshaw = require('rickshaw');
+var moment = require('moment');
 var console = global.console;
 
 require('./dashboard.less');
@@ -20,10 +21,14 @@ function Dashboard(options) {
 			{
 				cell: {
 					header: {
-						html: 'CPU Load'
+						text: 'CPU Load'
 					},
 					chart: {
-						seriesId: 'cpu'
+						seriesId: 'cpu',
+						color: 'blue',
+						min: 0.0,
+						max: 1.0,
+						seconds: 15
 					}
 				}
 			},
@@ -37,10 +42,13 @@ function Dashboard(options) {
 			{
 				cell: {
 					header: {
-						html: 'Memory Footprint'
+						text: 'Memory Footprint'
 					},
 					chart: {
-						seriesId: 'memory'
+						seriesId: 'memory',
+						min: 0.0,
+						max: 1.0,
+						seconds: 15
 					}
 				}
 			}
@@ -67,13 +75,21 @@ _.extend(Dashboard.prototype, {
 		_this._traverseLayout(_this.layout, {},
 			null,
 			function (ctx, layout, item, cell) {
-				if (cell && cell.chart && cell.chart.seriesId && cell.chart.epochInstance) {
+				if (cell && cell.chart && cell.chart.seriesId && cell.chart.graph) {
 					var series = seriesData[cell.chart.seriesId];
 					if (series && series.data) {
-						var chartData = series.data.map(function (value) {
-							return { time: Math.floor(timestamp / 1000), y: value };
+						var updatesData = series.data.map(function (value) {
+							return { x: Math.floor(timestamp / 1000), y: value };
 						});
-						cell.chart.epochInstance.push(chartData);
+						
+						var chartData = cell.chart.data;
+						chartData.push.apply(chartData, updatesData);
+						
+						while ((chartData[chartData.length-1].x - chartData[0].x) > cell.chart.seconds) {
+							chartData.shift();
+						}
+						
+						cell.chart.graph.render();
 					}
 				}
 			},
@@ -132,35 +148,79 @@ _.extend(Dashboard.prototype, {
 					if (cell.header) {
 						var $header = cell.header.$el = $('<div class="wsdash-card__header"></div>');
 						
-						$header.html(cell.header.html);
+						$header.text(cell.header.text);
 						
 						$header.appendTo($card);
 					}
 				
 					if (cell.chart) {
+						var $chartWrapper = cell.chart.$wrapper = $('<div class="wsdash-card__chart-wrapper"></div>');
+						
+						$chartWrapper.appendTo($card);
+						
 						var $chart = cell.chart.$el = $('<div class="wsdash-card__chart"></div>');
-				
-						$chart.appendTo($card);
-			
-						var epochInstance = cell.chart.epochInstance = new Epoch.Time.Line({
-							el: $chart[0],
-							type: 'time.line',
-							axes: [ 'bottom', 'left' ],
-							data: [
+
+						$chart.appendTo($chartWrapper);
+						
+						if (!cell.chart.data) {
+							var stubData = [],
+								now = Math.floor((new Date()).getTime() / 1000);
+							
+							for (var ic = cell.chart.seconds, i = ic; i >= 1; --i) {
+								stubData.push({
+									x: now - i,
+									y: 0,
+									stub: true
+								});
+							}
+							
+							cell.chart.data = stubData;
+						}
+						
+						var graph = cell.chart.graph = new Rickshaw.Graph({
+							element: $chart[0],
+							width: $chart.width(),
+							height: $chart.height(),
+							renderer: cell.chart.renderer || 'lineplot',
+							preserve: true,
+							series: [
 								{
-									label: cell.chart.seriesId,
-									values: [
-										{ time: Math.floor((new Date()).getTime() / 1000), y: 0 }
-									]
+									color: cell.chart.color || 'rgba(0,0,0,1)',
+									data: cell.chart.data,
+									name: (cell.header && cell.header.text) || cell.chart.name || cell.chat.seriesId
 								}
-							]
+							],
+							min: cell.chart.min,
+							max: cell.chart.max,
+							interpolation: cell.chart.interpolation || 'monotone'
 						});
+						
+						graph.render();
+						
+						var ticksTreatment = 'glow';
+						
+						var xAxis = new Rickshaw.Graph.Axis.Time({
+							graph: graph,
+							ticksTreatment: ticksTreatment,
+							timeUnit: {
+								seconds: Math.ceil(cell.chart.seconds / 5),
+								formatter: function (d) {
+									return moment(d).format('HH:mm:ss');
+								}
+							}
+						});
+						xAxis.render();
+						
+						var yAxis = new Rickshaw.Graph.Axis.Y({
+							graph: graph,
+							tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+							ticksTreatment: ticksTreatment
+						});
+						yAxis.render();
 					}
 				}
 			},
-			function (ctx, layout) {
-				
-			}
+			null
 		);
 	},
 	
@@ -170,7 +230,21 @@ _.extend(Dashboard.prototype, {
 		_this._traverseLayout(_this.layout, {},
 			null,
 			function (ctx, layout, item, cell) {
-				// TODO: Do something to update the size of the charts.
+				if (cell && cell.chart && cell.chart.graph) {
+					var $chartWrapper = cell.chart.$wrapper;
+					var $chart = cell.chart.$el;
+					
+					$chart.hide();
+					
+					cell.chart.graph.configure({
+						width: $chartWrapper.width(),
+						height: $chartWrapper.height()
+					});
+					
+					$chart.show();
+					
+					cell.chart.graph.render();
+				}
 			},
 			null
 		);
