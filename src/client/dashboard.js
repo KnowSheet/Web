@@ -10,8 +10,10 @@ var setTimeout = global.setTimeout;
 require('./dashboard.less');
 
 
-var CHART_DATA_DEFAULT_TTL = 10;
-var SERIES_DATA_DEFAULT_TTL = 30;
+var CHART_DEFAULTS = {
+	TIME_INTERVAL: 10 * 1000,
+	TICK_COUNT: 5
+};
 
 
 function Dashboard(options) {
@@ -49,30 +51,26 @@ _.extend(Dashboard.prototype, {
 	},
 	
 	updateCharts: function (updates) {
-		var _this = this,
-			layout = _this._layout;
+		var _this = this;
 		
 		for (var seriesId in updates) { if (updates.hasOwnProperty(seriesId)) {
 			var update = updates[seriesId];
 			if (update && update.data) {
-				var series = _this._series[seriesId] = _this._series[seriesId] || {};
-				series.data = series.data || [];
-				series.ttl = update.ttl || series.ttl || SERIES_DATA_DEFAULT_TTL;
-				
 				var updateData = update.data;
 				
-				var seriesData = series.data;
+				var series = _this._series[seriesId] = _this._series[seriesId] || {};
+				var seriesData = series.data = series.data || [];
 				
-				seriesData.push.apply(seriesData, updateData);
-				
-				// Forget old data:
-				while ((seriesData[seriesData.length-1].x - seriesData[0].x) > series.ttl) {
-					seriesData.shift();
+				if (update.replace) {
+					seriesData.splice.apply(seriesData, [ 0, seriesData.length ].concat(updateData));
 				}
+				else {
+					seriesData.push.apply(seriesData, updateData);
+				}
+				
+				_this._copyDataToLayout(seriesId);
 			}
 		} }
-		
-		_this._copyDataToLayout();
 	},
 	
 	_traverseLayout: function (layout, ctx, beforeFn, itemFn, afterFn) {
@@ -145,10 +143,8 @@ _.extend(Dashboard.prototype, {
 						$chart.appendTo($chartWrapper);
 						
 						var series = _this._series[cell.chart.seriesId] || {};
-						var chartData = cell.chart.data = cell.chart.data || [];
-						var chartTtl = cell.chart.ttl || series.ttl || CHART_DATA_DEFAULT_TTL;
 						
-						_this._stubChartData(chartData, chartTtl);
+						_this._copyDataToLayout(cell.chart.seriesId, cell);
 						
 						var graph = cell.chart.graph = new Rickshaw.Graph({
 							element: $chart[0],
@@ -158,38 +154,42 @@ _.extend(Dashboard.prototype, {
 							preserve: true,
 							series: [
 								{
-									color: cell.chart.color || 'rgba(0,0,0,1)',
-									data: chartData,
-									name: (cell.header && cell.header.text) || cell.chart.name || cell.chat.seriesId
+									name: cell.chart.seriesId,
+									color: (cell.chart.color || 'rgba(0,0,0,1)'),
+									data: cell.chart.data
 								}
 							],
 							min: cell.chart.min,
 							max: cell.chart.max,
-							interpolation: cell.chart.interpolation || 'monotone'
+							interpolation: cell.chart.interpolation || 'none'
 						});
 						
 						graph.render();
 						
 						var ticksTreatment = 'glow';
 						
-						var xAxis = new Rickshaw.Graph.Axis.Time({
+						cell.chart.xAxisTimeUnit = {
+							seconds: _this._getChartTickInterval(cell),
+							formatter: function (d) {
+								return moment(d).format('HH:mm:ss');
+							}
+						};
+						
+						var xAxis = cell.chart.xAxis = new Rickshaw.Graph.Axis.Time({
 							graph: graph,
 							ticksTreatment: ticksTreatment,
-							timeUnit: {
-								seconds: Math.ceil(chartTtl / 5),
-								formatter: function (d) {
-									return moment(d).format('HH:mm:ss');
-								}
-							}
+							timeUnit: cell.chart.xAxisTimeUnit
 						});
 						xAxis.render();
 						
-						var yAxis = new Rickshaw.Graph.Axis.Y({
+						var yAxis = cell.chart.yAxis = new Rickshaw.Graph.Axis.Y({
 							graph: graph,
 							tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
 							ticksTreatment: ticksTreatment
 						});
 						yAxis.render();
+						
+						_this._updateChartTimeInterval(cell);
 					}
 				}
 			},
@@ -199,44 +199,84 @@ _.extend(Dashboard.prototype, {
 		_this._resizeLayout();
 	},
 	
-	_copyDataToLayout: function () {
+	_copyDataToLayout: function (targetSeriesId, targetCell) {
 		var _this = this,
 			layout = _this._layout;
 		
 		_this._traverseLayout(layout, {},
 			null,
 			function (ctx, layout, item, cell) {
-				if (cell && cell.chart) {
+				if (targetCell && cell !== targetCell) { return; }
+				if (cell && cell.chart && (!targetSeriesId || cell.chart.seriesId === targetSeriesId)) {
+					var chartData = cell.chart.data = cell.chart.data || [];
+					
 					var series = _this._series[cell.chart.seriesId];
+					
 					if (series) {
 						var seriesData = series.data;
-						
-						var chartData = cell.chart.data = cell.chart.data || [];
-						var chartTtl = cell.chart.ttl || series.ttl || CHART_DATA_DEFAULT_TTL;
 						
 						var selectedData = [],
 							ic = seriesData.length,
 							i = ic-1;
 						
 						// Add new data:
-						while (i >= 0 && (seriesData[ic-1].x - seriesData[i].x) <= chartTtl) {
+						while (i >= 0) {
+							// Push backwards to concat later:
 							selectedData.unshift({ x: seriesData[i].x, y: seriesData[i].y });
+							
+							// Add until we get enough points to fill the required time interval:
+							if ((selectedData[selectedData.length-1].x - selectedData[0].x) > cell.chart.timeInterval) {
+								break;
+							}
+							
 							--i;
 						}
 						
 						// Note: Update chart data in-place because our graph has a reference to it:
 						chartData.splice.apply(chartData, [ 0, chartData.length ].concat(selectedData));
-						
-						_this._stubChartData(chartData, chartTtl);
-						
-						if (cell.chart.graph) {
-							cell.chart.graph.render();
-						}
 					}
+					
+					_this._stubChartData(chartData, cell.chart.timeInterval);
+					
+					// Convert to seconds (Rickshaw requires this time format):
+					chartData.forEach(function (point) {
+						point.x /= 1000;
+					});
+					
+					if (cell.chart.graph) {
+						cell.chart.graph.render();
+					}
+					
+					_this._updateChartTimeInterval(cell);
 				}
 			},
 			null
 		);
+	},
+	
+	_getChartTickInterval: function (cell) {
+		var chartData = cell.chart.data;
+		var chartTimeInterval = (chartData && chartData.length >= 2 ? chartData[chartData.length-1].x - chartData[0].x : CHART_DEFAULTS.TIME_INTERVAL);
+		
+		var chartTickInterval = Math.ceil(chartTimeInterval / (cell.chart.tickCount || CHART_DEFAULTS.TICK_COUNT));
+		
+		return chartTickInterval;
+	},
+	
+	_updateChartTimeInterval: function (cell) {
+		var _this = this,
+			chartTickInterval;
+		
+		if (cell.chart.xAxisTimeUnit) {
+			chartTickInterval = _this._getChartTickInterval(cell);
+			if (chartTickInterval !== cell.chart.xAxisTimeUnit.seconds) {
+				cell.chart.xAxisTimeUnit.seconds = chartTickInterval;
+				
+				if (cell.chart.xAxis) {
+					cell.chart.xAxis.render();
+				}
+			}
+		}
 	},
 	
 	_resizeLayout: function () {
@@ -266,8 +306,11 @@ _.extend(Dashboard.prototype, {
 		);
 	},
 	
-	_stubChartData: function (chartData, ttl) {
-		var nowX = ((new Date()).getTime() / 1000);
+	_stubChartData: function (chartData, timeInterval) {
+		// WARNING: Assuming a time-based data that comes each second, so we stub each second back until we fill the whole time interval.
+		// TODO: Either update the stubbing to support various domains or remove if we don't need it.
+		
+		var nowX = (new Date()).getTime();
 		
 		if (chartData.length <= 0) {
 			chartData.push({
@@ -277,9 +320,9 @@ _.extend(Dashboard.prototype, {
 			});
 		}
 		
-		while ((chartData[chartData.length-1].x - chartData[0].x) < ttl) {
+		while ((chartData[chartData.length-1].x - chartData[0].x) <= timeInterval) {
 			chartData.unshift({
-				x: chartData[0].x - 1, //< WARNING: Assuming a time-based data that comes each second, so we stub 1 second back.
+				x: chartData[0].x - 1000,
 				y: 0,
 				stub: true
 			});

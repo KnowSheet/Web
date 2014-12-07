@@ -62,6 +62,8 @@ function loadLayout() {
 	
 	layoutLoading = true;
 	
+	// TODO: Add a message/spinner that the new layout is loading.
+	
 	var deferred = $.Deferred();
 	
 	deferred
@@ -79,6 +81,7 @@ function loadLayout() {
 			}
 		});
 	
+	// Simulate loading the layout from the server asynchronously:
 	setTimeout(function () {
 		
 		// TODO: Request the layout from the server-side.
@@ -111,7 +114,7 @@ function loadLayout() {
 									color: 'purple',
 									min: 0.0,
 									max: 1.0,
-									ttl: 10
+									timeInterval: 10 * 1000
 								}
 							}
 						},
@@ -124,7 +127,7 @@ function loadLayout() {
 									seriesId: 'memory',
 									min: 0.0,
 									max: 1.0,
-									ttl: 10
+									timeInterval: 10 * 1000
 								}
 							}
 						}
@@ -142,7 +145,7 @@ function loadLayout() {
 									color: 'red',
 									min: 0.0,
 									max: 1.0,
-									ttl: 20
+									timeInterval: 20 * 1000
 								}
 							}
 						}
@@ -162,10 +165,16 @@ function loadMeta() {
 	$.ajax({
 		url: 'http://localhost:8080/meta',
 		dataType: 'json'
-	}).then(function (meta) {
-		for (var seriesId in meta) { if (meta.hasOwnProperty(seriesId)) {
-			loadData(seriesId, meta[seriesId]);	
-		} }
+	}).then(function (response) {
+		var meta = response;
+		
+		if (meta) {
+			//console.log('Received meta:', meta);
+			
+			for (var seriesId in meta) { if (meta.hasOwnProperty(seriesId)) {
+				loadData(seriesId, meta[seriesId]);	
+			} }
+		}
 	}, function (jqXHR) {
 		console.error(jqXHR);
 		
@@ -177,17 +186,17 @@ function loadData(seriesId, meta) {
 	$.ajax({
 		url: meta.data_url,
 		dataType: 'json'
-	}).then(function (data) {
-		var values = (data[seriesId] && data[seriesId].data);
+	}).then(function (response) {
+		var data = (response && response[seriesId] && response[seriesId].data);
 		
-		if (values) {
+		if (data && data.length > 0) {
+			//console.log('Received data:', data);
+			
 			var updates = {};
 			
 			updates[seriesId] = {
-				data: [].concat(values).map(function (value, index) {
-					return { x: index, y: value };
-				}),
-				ttl: values.length
+				data: data,
+				replace: true
 			};
 			
 			dashboard.updateCharts(updates);
