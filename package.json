@@ -8,6 +8,7 @@
     "dev": "echo \"Starting for development...\\n\" && NODE_ENV=development node ./index.js",
 	"start": "echo \"Building with webpack...\\n\" && node ./node_modules/webpack/bin/webpack.js && echo \"Starting for testing in producton mode...\\n\" && NODE_ENV=production node ./index.js",
     "build": "echo \"Building with webpack...\\n\" && node ./node_modules/webpack/bin/webpack.js && echo \"\\nDone ($?).\";",
+	"clean": "echo \"Cleaning...\\n\" && rm -r -v ./public && echo \"\\nDone ($?).\";",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "main": "./src/server/index.js",
