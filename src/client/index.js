@@ -30,6 +30,8 @@ var channel = new Channel({
 	})
 	.on('disconnected', function (channel) {
 		console.log('Channel has disconnected from "' + channel.url + '".');
+		
+		// TODO: Handle loss of periodic updates (when disconnected for a moment). Currently the chart does not look pretty in this case.
 	})
 	.on('sent', function (channel, message) {
 		console.info('Channel sent a message:', message);
