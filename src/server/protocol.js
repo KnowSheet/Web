@@ -1,6 +1,3 @@
-var usage = require('usage');
-var osUtils = require('os-utils');
-
 var logger = require('./logger');
 
 var subscribers = [];
@@ -15,43 +12,22 @@ function sendUpdates(payload) {
 }
 
 function lookup(next) {
-	
-	/**
-	osUtils.cpuUsage(function (cpuUsage) {
-		var memory = osUtils.freememPercentage();
+	// Simulate async data retrieval:
+	setTimeout(function () {
+		var now = Date.now();
 		
+		// Simulate the data flow with random time-based data:
 		sendUpdates({
 			cpu: {
-				data: [ cpuUsage ],
+				data: [ { x: now, y: Math.abs(Math.sin(now)) * Math.random() } ],
 			},
 			memory: {
-				data: [ memory ]
+				data: [ { x: now, y: Math.abs(Math.cos(now)) * Math.random() } ]
 			}
 		});
 		
 		next();
-	});
-	// */
-	
-	/**/
-	usage.lookup(process.pid, function (err, result) {
-		//logger.info('usage lookup finished: %j', { error: err, result: result }, {});
-		
-		if (err) {
-			return next();
-		}
-		
-		sendUpdates({
-			cpu: {
-				data: [ { x: Date.now(), y: result.cpu / 100 } ],
-			},
-			memory: {
-				data: [ { x: Date.now(), y: osUtils.freemem() / osUtils.totalmem() } ]
-			}
-		});
-		next();
-	});
-	// */
+	}, 10);
 }
 
 var timer = null;
@@ -76,24 +52,6 @@ function stop() {
 	clearTimeout(timer);
 }
 
-
-/**
- * Provides a random periodical CPU load.
- */
-function doSomeCalculations() {
-	var i = 20000,
-		results = [];
-	
-	while (i-- > 0) {
-		var value = String(Math.tan(Math.random()));
-		results.unshift(value);
-	}
-	
-	setTimeout(doSomeCalculations, 2000 + Math.random() * 1000);
-}
-setTimeout(doSomeCalculations, 500);
-
-
 /**
  * App-level protocol.
  * Receives messages and responds to them.
@@ -107,7 +65,7 @@ module.exports = {
 			channel.send({
 				action: 'welcome'
 			});
-		
+			
 			subscribers.push(channel);
 			if (subscribers.length === 1) {
 				start();

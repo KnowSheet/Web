@@ -28,13 +28,11 @@
     "moment": "^2.8.4",
     "moment-timezone": "^0.2.5",
     "node-event-emitter": "0.0.1",
-    "os-utils": "0.0.14",
     "rickshaw": "^1.4.6",
     "script-loader": "^0.6.1",
     "serve-static": "^1.7.1",
     "style-loader": "^0.8.2",
     "underscore": "^1.7.0",
-    "usage": "^0.5.0",
     "webpack": "^1.4.13",
     "winston": "^0.8.3",
     "ws": "^0.5.0"
