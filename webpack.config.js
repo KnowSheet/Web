@@ -21,7 +21,8 @@ module.exports = {
 			"node-event-emitter",
 			"d3",
 			"rickshaw",
-			"rickshaw-css"
+			"rickshaw-css",
+			"moment"
 		]
 	},
 	module: {
@@ -52,6 +53,7 @@ module.exports = {
 	},
 	plugins: [
 		new webpack.optimize.CommonsChunkPlugin("vendor", "libs/[name].js?[chunkhash]"),
+		// TODO: Add `new webpack.optimize.UglifyJsPlugin({}),`, make it not break the code (currently it breaks).
 		new HtmlWebpackPlugin({
 			template: './src/client/index.blueimp.html'
 		})
