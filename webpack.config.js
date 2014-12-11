@@ -47,7 +47,10 @@ module.exports = {
 			"jquery": path.join(__dirname, "node_modules/jquery/dist/jquery.js"),
 			"d3": path.join(__dirname, "node_modules/d3/d3.js"),
 			"rickshaw": path.join(__dirname, "node_modules/rickshaw/rickshaw.js"),
-			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/rickshaw.css")
+			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/rickshaw.css"),
+			
+			"prefixer.less": path.join(__dirname, "src/frontend/vendor/prefixer.less"),
+			"flexbox.less": path.join(__dirname, "src/frontend/vendor/flexbox.less")
 		},
 		extensions: ["", ".js"]
 	},

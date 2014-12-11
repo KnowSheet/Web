@@ -1,0 +1,67 @@
+@import "~prefixer.less";
+@import "~flexbox.less";
+
+.knsh-dashboard-layout {
+	.box-sizing(border-box);
+	
+	margin: 0;
+	padding: 0;
+}
+
+.knsh-dashboard-layout-group {
+	.flexbox();
+	
+	.box-sizing(border-box);
+	
+	width: 100%;
+	height: 100%;
+	
+	
+	&__items {
+		.flexbox();
+		
+		 .box-sizing(border-box);
+		
+		width: 100%;
+		height: 100%;
+	}
+	
+	&__item {
+		.flexbox();
+		
+		.box-sizing(border-box);
+		
+		width: 100%;
+		height: 100%;
+	}
+	
+	&__m-row {
+		> .knsh-dashboard-layout-group {
+			&__items {
+				.flex-direction(row);
+			}
+		}
+	}
+	&__m-col {
+		> .knsh-dashboard-layout-group {
+			&__items {
+				.flex-direction(column);
+			}
+		}
+	}
+}
+
+.knsh-dashboard-layout-card {
+	.box-sizing(border-box);
+	
+	margin: 10px;
+	padding: 20px;
+	
+	width: 100%;
+	height: 100%;
+	
+	overflow: auto;
+	
+	background: #fff;
+	.box-shadow(0 2px 5px rgba(0,0,0,0.5));
+}

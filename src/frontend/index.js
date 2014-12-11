@@ -1,8 +1,14 @@
 var $ = require('jquery');
+var _ = require('underscore');
+var EventEmitter = require('node-event-emitter');
 
 var Channel = require('./channel');
 var Dashboard = require('./dashboard');
+var DashboardDataStore = require('./dashboard-data-store');
+var DashboardLayoutStore = require('./dashboard-layout-store');
 var config = require('./config');
+
+require('./index.less');
 
 var console = global.console;
 var setTimeout = global.setTimeout;
@@ -14,7 +20,19 @@ console.log(logPrefix + 'Loaded at ' + (new Date()));
 
 
 function init() {
-	var dashboard = new Dashboard();
+	var dispatcher = new EventEmitter();
+	
+	var dashboardDataStore = new DashboardDataStore(dispatcher);
+	
+	var dashboardLayoutStore = new DashboardLayoutStore(dispatcher);
+	
+	var dashboard = new Dashboard({
+		getDataStore: function () { return dashboardDataStore; },
+		getLayoutStore: function () { return dashboardLayoutStore; }
+	}, {
+	});
+	
+	dashboard.mount( $('body').addClass('knsh-root') );
 	
 	var channel = new Channel({
 		url: config.backend.wsUrl
@@ -42,7 +60,7 @@ function init() {
 			
 			switch (message.action) {
 				case 'update':
-					dashboard.updateCharts(message.payload);
+					dispatcher.emit('receive-data-updates', message.payload);
 					break;
 			}
 		})
@@ -73,7 +91,7 @@ function init() {
 			.then(function (layout) {
 				layoutLoading = false;
 				
-				dashboard.updateLayout(layout);
+				dispatcher.emit('receive-layout', layout);
 			}, function (error) {
 				layoutLoading = false;
 				
@@ -94,12 +112,13 @@ function init() {
 						row: [
 							{
 								cell: {
-									header: {
-										text: 'value0'
-									},
-									chart: {
-										seriesId: 'value0',
-										color: 'blue'
+									visualizer: {
+										name: 'plot-visualizer',
+										options: {
+											headerText: 'value0',
+											seriesId: 'value0',
+											color: 'blue'
+										}
 									}
 								}
 							}
@@ -109,28 +128,30 @@ function init() {
 						row: [
 							{
 								cell: {
-									header: {
-										text: 'CPU Load'
-									},
-									chart: {
-										seriesId: 'cpu',
-										color: 'purple',
-										min: 0.0,
-										max: 1.0,
-										timeInterval: 10 * 1000
+									visualizer: {
+										name: 'plot-visualizer',
+										options: {
+											headerText: 'CPU Load',
+											seriesId: 'cpu',
+											color: 'purple',
+											min: 0.0,
+											max: 1.0,
+											timeInterval: 10 * 1000
+										}
 									}
 								}
 							},
 							{
 								cell: {
-									header: {
-										text: 'Memory Footprint'
-									},
-									chart: {
-										seriesId: 'memory',
-										min: 0.0,
-										max: 1.0,
-										timeInterval: 10 * 1000
+									visualizer: {
+										name: 'plot-visualizer',
+										options: {
+											headerText: 'Memory Footprint',
+											seriesId: 'memory',
+											min: 0.0,
+											max: 1.0,
+											timeInterval: 10 * 1000
+										}
 									}
 								}
 							}
@@ -140,15 +161,16 @@ function init() {
 						row: [
 							{
 								cell: {
-									header: {
-										text: 'CPU Load copy'
-									},
-									chart: {
-										seriesId: 'cpu',
-										color: 'red',
-										min: 0.0,
-										max: 1.0,
-										timeInterval: 20 * 1000
+									visualizer: {
+										name: 'plot-visualizer',
+										options: {
+											headerText: 'CPU Load copy',
+											seriesId: 'cpu',
+											color: 'red',
+											min: 0.0,
+											max: 1.0,
+											timeInterval: 20 * 1000
+										}
 									}
 								}
 							}
@@ -206,7 +228,7 @@ function init() {
 					replace: true
 				};
 				
-				dashboard.updateCharts(updates);
+				dispatcher.emit('receive-data-updates', updates);
 			}
 		}, function (jqXHR) {
 			console.error(logPrefix + 'Data loading error:', url, jqXHR);
@@ -214,6 +236,12 @@ function init() {
 			global.alert('An error occurred while loading data from ' + url + '.');
 		});
 	}
+	
+	
+	$(global).on('resize orientationchange', _.throttle(function () {
+		dispatcher.emit('resize-window');
+	}, 50));
+	
 	
 	loadLayout();
 	

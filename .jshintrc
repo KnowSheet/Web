@@ -5,5 +5,6 @@
   "undef":     true,
   "unused":    false,
   "onecase":   true,
-  "lastsemic": true
+  "lastsemic": true,
+  "laxbreak":  true
 }
