@@ -1,9 +1,5 @@
-var server = require('./src/server');
+// Start the backend stub:
+require('./src/backend_stub').start(require('./src/backend_stub/config.js'));
 
-// Start the server-side which includes the WebSocket server and a simple HTTP server to serve static files to the browser.
-server.start();
-
-// HACK: Avoid making additional gulp task that runs both the server-side and the webpack development server.
-if (process.env.NODE_ENV === 'development') {
-	require('./gulpfile.js').run('webpack-dev-server');	
-}
+// Start the frontend development server that provides live recompilation and reload in the browser during development:
+require('./gulpfile.js').run('webpack-dev-server');	

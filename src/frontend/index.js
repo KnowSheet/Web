@@ -1,43 +1,45 @@
 var $ = require('jquery');
+
 var Channel = require('./channel');
 var Dashboard = require('./dashboard');
+var config = require('./config');
+
 var console = global.console;
 var setTimeout = global.setTimeout;
 
-console.log('App loaded ' + (new Date()));
+var logPrefix = '[frontend] ';
 
 
-$(global).on('load', function () {
+console.log(logPrefix + 'Loaded at ' + (new Date()));
 
+
+function init() {
+// TODO: Indent the function body.
 var dashboard = new Dashboard();
 
-
-// TODO: Maybe build the WebSocket endpoint URL from the same config as on the server-side (?).
-var channelUrl = 'ws://localhost:3002';
-
 var channel = new Channel({
-	url: channelUrl
+	url: config.backend.wsUrl
 })
 	.on('connecting', function (channel) {
-		console.log('Channel is connecting to "' + channel.url + '"...');
+		console.log(logPrefix + 'Channel is connecting to "' + channel.url + '"...');
 	})
 	.on('connected', function (channel) {
-		console.log('Channel has connected to "' + channel.url + '".');
+		console.log(logPrefix + 'Channel has connected to "' + channel.url + '".');
 		
 		channel.send({
 			action: 'hello'
 		});
 	})
 	.on('disconnected', function (channel) {
-		console.log('Channel has disconnected from "' + channel.url + '".');
+		console.log(logPrefix + 'Channel has disconnected from "' + channel.url + '".');
 		
 		// TODO: Handle loss of periodic updates (when disconnected for a moment). Currently the chart does not look pretty in this case.
 	})
 	.on('sent', function (channel, message) {
-		console.info('Channel sent a message:', message);
+		console.info(logPrefix + 'Channel sent a message:', message);
 	})
 	.on('message', function (channel, message) {
-		console.info('Channel received a message:', message);
+		console.info(logPrefix + 'Channel received a message:', message);
 		
 		switch (message.action) {
 			case 'update':
@@ -46,13 +48,13 @@ var channel = new Channel({
 		}
 	})
 	.on('error', function (channel, error) {
-		console.error('Channel got an error:', error);
+		console.error(logPrefix + 'Channel got an error:', error);
 	})
 	.on('reconnect-scheduled', function (channel) {
-		console.log('Channel will reconnect in ' + channel.reconnectDelay + 'ms.');
+		console.log(logPrefix + 'Channel will reconnect in ' + channel.reconnectDelay + 'ms.');
 	})
 	.on('reconnecting', function (channel) {
-		console.log('Channel is reconnecting to "' + channel.url + '"...');
+		console.log(logPrefix + 'Channel is reconnecting to "' + channel.url + '"...');
 	});
 
 
@@ -76,17 +78,17 @@ function loadLayout() {
 		}, function (error) {
 			layoutLoading = false;
 			
-			console.error(error);
+			console.error(logPrefix + 'Layout loading error:', error);
 			
 			if (global.confirm('An error occurred while loading the layout. Try again?')) {
 				loadLayout();
 			}
 		});
 	
-	// Simulate loading the layout from the server asynchronously:
+	// Simulate loading the layout from the backend asynchronously:
 	setTimeout(function () {
 		
-		// TODO: Request the layout from the server-side.
+		// TODO: Request the layout from the backend.
 		var layout = {
 			col: [
 				{
@@ -164,8 +166,10 @@ function loadLayout() {
 }
 
 function loadMeta() {
+	var url = config.backend.httpUrl + '/meta';
+	
 	$.ajax({
-		url: 'http://localhost:8080/meta',
+		url: url,
 		dataType: 'json'
 	}).then(function (response) {
 		var meta = response;
@@ -178,15 +182,17 @@ function loadMeta() {
 			} }
 		}
 	}, function (jqXHR) {
-		console.error(jqXHR);
+		console.error(logPrefix + 'Meta loading error:', url, jqXHR);
 		
-		global.alert('An error occurred while loading meta.');
+		global.alert('An error occurred while loading meta from ' + url + '.');
 	});
 }
 
 function loadData(seriesId, meta) {
+	var url = meta.data_url;
+	
 	$.ajax({
-		url: meta.data_url,
+		url: url,
 		dataType: 'json'
 	}).then(function (response) {
 		var data = (response && response[seriesId] && response[seriesId].data);
@@ -204,9 +210,9 @@ function loadData(seriesId, meta) {
 			dashboard.updateCharts(updates);
 		}
 	}, function (jqXHR) {
-		console.error(jqXHR);
+		console.error(logPrefix + 'Data loading error:', url, jqXHR);
 		
-		global.alert('An error occurred while loading data.');
+		global.alert('An error occurred while loading data from ' + url + '.');
 	});
 }
 
@@ -216,5 +222,7 @@ loadMeta();
 
 channel.open();
 
+console.log(logPrefix + 'Initialized at ' + (new Date()));
+}
 
-});
+$(global).on('load', init);

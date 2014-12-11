@@ -9,12 +9,12 @@ var jshintConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '.jshintrc'))
 module.exports = {
 	context: __dirname,
 	output: {
-		path: path.join(__dirname, "public"),
+		path: path.join(__dirname, "build"),
 		publicPath: "/",
 		filename: "app/[name].js?[chunkhash]"
 	},
 	entry: {
-		app: "./src/client/index.js",
+		app: "./src/frontend/index.js",
 		vendor: [
 			"jquery",
 			"underscore",
@@ -55,7 +55,7 @@ module.exports = {
 		new webpack.optimize.CommonsChunkPlugin("vendor", "libs/[name].js?[chunkhash]"),
 		// TODO: Add `new webpack.optimize.UglifyJsPlugin({}),`, make it not break the code (currently it breaks).
 		new HtmlWebpackPlugin({
-			template: './src/client/index.blueimp.html'
+			template: './src/frontend/index.blueimp.html'
 		})
 	],
 	jshint: _.extend({

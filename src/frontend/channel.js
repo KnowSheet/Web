@@ -1,12 +1,11 @@
 var _ = require('underscore');
 var inherits = require('inherits');
 var EventEmitter = require('node-event-emitter');
+
 var WebSocket = global.WebSocket;
 var setTimeout = global.setTimeout;
 var clearTimeout = global.clearTimeout;
 var console = global.console;
-
-var __filename = module.id;
 
 var _nextId = 1;
 
@@ -55,15 +54,19 @@ function Channel(options) {
 	// Private properties:
 	_this._ws = null;
 	_this._reconnectTimer = null;
+	
+	_this._reconnectReset();
 }
 inherits(Channel, EventEmitter);
 _.extend(Channel.prototype, {
 	open: function () {
 		var _this = this;
 		
-		if (_this._ws) { throw new Error(__filename + ': Socket exists, close first.'); }
+		if (_this._ws) { throw new Error('Channel#open: Socket exists, close first.'); }
 		
 		_this._closed = false;
+		
+		_this._reconnectReset();
 		
 		_this.emit('connecting', _this);
 		
@@ -73,7 +76,7 @@ _.extend(Channel.prototype, {
 	send: function (message) {
 		var _this = this;
 		
-		if (!_this._ws) { throw new Error(__filename + ': No socket.'); }
+		if (!_this._ws) { throw new Error('Channel#send: No socket.'); }
 		
 		_this.emit('sending', _this, message);
 		
@@ -87,7 +90,7 @@ _.extend(Channel.prototype, {
 	receive: function (data) {
 		var _this = this;
 		
-		if (!_this._ws) { throw new Error(__filename + ': No socket.'); }
+		if (!_this._ws) { throw new Error('Channel#receive: No socket.'); }
 		
 		try {
 			var message = _this.deserializeMessage(data);
@@ -109,6 +112,8 @@ _.extend(Channel.prototype, {
 		_this._closed = true;
 		
 		_this._destroySocket();
+		
+		_this._reconnectReset();
 		
 		_this.emit('disconnected', _this);
 	},
@@ -153,11 +158,11 @@ _.extend(Channel.prototype, {
 	_acceptSocket: function (ws) {
 		var _this = this;
 		
+		if (!ws) { throw new Error('Channel#_acceptSocket: No socket.'); }
+		
 		_this._ws = ws;
 		
 		ws.onopen = function () {
-			_this._reconnectReset();
-			
 			_this.emit('connected', _this);
 		};
 		ws.onclose = function (event) {

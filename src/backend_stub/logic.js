@@ -53,12 +53,11 @@ function stop() {
 }
 
 /**
- * App-level protocol.
- * Receives messages and responds to them.
+ * App-level logic for receiving messages and responding to them.
  */
 module.exports = {
 	setup: function (channel) {
-	}, 
+	},
 	receive: function (channel, message) {
 		switch (message.action) {
 		case 'hello':

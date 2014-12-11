@@ -4,10 +4,11 @@ var EventEmitter = require('node-event-emitter');
 var inherits = require('inherits');
 var Rickshaw = require('rickshaw');
 var moment = require('moment');
-var console = global.console;
-var setTimeout = global.setTimeout;
 
 require('./dashboard.less');
+
+var console = global.console;
+var setTimeout = global.setTimeout;
 
 
 var CHART_DEFAULTS = {

@@ -9,20 +9,17 @@ var ChannelServer = require('./channel-server');
 var logger = require('./logger');
 
 module.exports = {
-	start: function () {
-		var config = require('./config');
-		var webpackConfig = require('../../webpack.config.js');
-		
+	start: function (config) {
 		var channelServer = new ChannelServer({
-			protocol: require('./protocol')
+			logic: require('./logic')
 		});
 		channelServer.listen(config.wsPort);
 		logger.info('WebSocket server listening at ws://localhost:' + config.wsPort);
 		
-		var appHttpServer = http.createServer();
-		var app = express(appHttpServer);
-		app.use(serveStatic(webpackConfig.output.path));
-		app.listen(config.appPort);
+		var httpServer = http.createServer();
+		var app = express(httpServer);
+		app.use(serveStatic(config.staticPath));
+		app.listen(config.httpPort);
 		logger.info('App server listening at http://localhost:' + config.appPort);
 	}
 };

@@ -3,8 +3,8 @@ var inherits = require('inherits');
 var http = require('http');
 var WebSocketServer = require('ws').Server;
 var EventEmitter = require('node-event-emitter');
-var Channel = require('./channel');
 
+var Channel = require('./channel');
 var logger = require('./logger');
 
 /**
@@ -17,13 +17,13 @@ function ChannelServer(options) {
 	var _this = this;
 	
 	/**
-	 * App-level protocol definition.
+	 * App-level logic handlers.
 	 * @property
 	 */
-	_this.protocol = {
-		setup: function () {},
-		receive: function () {},
-		teardown: function () {}
+	_this._logic = {
+		setup: function ( /*channel*/ ) {},
+		receive: function ( /*channel, message*/ ) {},
+		teardown: function ( /*channel*/ ) {}
 	};
 	
 	// Apply the property values passed to the constructor:
@@ -42,7 +42,7 @@ function ChannelServer(options) {
 		channel.on('connected', function (channel) {
 			logger.info('Channel connected.');
 			
-			_this.protocol.setup(channel);
+			_this.logic.setup(channel);
 			
 			_this.emit('channel-connected', _this, channel);
 		});
@@ -54,7 +54,7 @@ function ChannelServer(options) {
 		channel.on('message', function (channel, message) {
 			logger.info('Channel received a message: %j', { message: message }, {});
 		
-			_this.protocol.receive(channel, message);
+			_this.logic.receive(channel, message);
 		});
 
 		channel.on('error', function (channel, error) {
@@ -64,7 +64,7 @@ function ChannelServer(options) {
 		channel.on('disconnected', function (channel) {
 			logger.info('Channel disconnected.');
 			
-			_this.protocol.teardown(channel);
+			_this.logic.teardown(channel);
 		});
 	
 		channel.accept(ws);
