@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('jquery');
 var _ = require('underscore');
 
@@ -7,7 +9,7 @@ var moment = require('moment');
 require('./plot-visualizer.less');
 
 
-function PlotVisualizer(locator, options) {
+function PlotVisualizer(locator, options, dataUrl) {
 	var _this = this;
 	
 	_this._locator = locator;
@@ -15,17 +17,18 @@ function PlotVisualizer(locator, options) {
 	_this._layoutStore = _this._locator.getLayoutStore();
 	_this._dataStore = _this._locator.getDataStore();
 	
+	_this._dataUrl = dataUrl;
+	
 	_this._options = _.extend({
-		headerText: '',
-		seriesId: undefined,
+		header_text: '',
 		renderer: 'lineplot',
 		color: 'rgba(0,0,0,1)',
 		interpolation: 'none',
 		min: undefined,
 		max: undefined,
-		timeInterval: null,
-		tickCount: 5,
-		tickFormat: 'HH:mm:ss'
+		time_interval: null,
+		tick_count: 5,
+		tick_format: 'HH:mm:ss'
 	}, options);
 	
 	_this._data = [];
@@ -48,7 +51,7 @@ _.extend(PlotVisualizer.prototype, {
 	componentDidMount: function () {
 		var _this = this;
 		
-		_this.$header.text( _this._options.headerText );
+		_this.$header.text( _this._options.header_text );
 		
 		var graph = _this._graph = new Rickshaw.Graph({
 			element: _this.$plot[0],
@@ -58,7 +61,6 @@ _.extend(PlotVisualizer.prototype, {
 			preserve: true,
 			series: [
 				{
-					name: _this._options.seriesId,
 					color: _this._options.color,
 					data: _this._data
 				}
@@ -73,7 +75,7 @@ _.extend(PlotVisualizer.prototype, {
 		var xAxisTimeUnit = _this._xAxisTimeUnit = {
 			seconds: _this._getTimeTickInterval(),
 			formatter: function (d) {
-				return moment(d).format(_this._options.tickFormat);
+				return moment(d).format(_this._options.tick_format);
 			}
 		};
 		
@@ -99,7 +101,7 @@ _.extend(PlotVisualizer.prototype, {
 		});
 		
 		_this._dataStore.on('data-updated', _this._dataUpdatedListener = function (args) {
-			if (!args || !args.seriesId || args.seriesId === _this._options.seriesId) {
+			if (!args || !args.dataUrl || args.dataUrl === _this._dataUrl) {
 				_this._renderData();
 			}
 		});
@@ -150,25 +152,23 @@ _.extend(PlotVisualizer.prototype, {
 	_renderData: function () {
 		var _this = this;
 		
-		var series = _this._dataStore.getData(_this._options.seriesId);
+		var seriesData = _this._dataStore.getData(_this._dataUrl);
 		
-		if (series) {
+		if (seriesData) {
 			var plotData = _this._data;
 			
-			var storeData = series.data;
-			
 			var selectedData = [],
-				ic = storeData.length,
+				ic = seriesData.length,
 				i = ic-1,
-				timeInterval = _this._options.timeInterval;
+				timeInterval = _this._options.time_interval;
 			
 			// Add new data:
 			while (i >= 0) {
 				// Push backwards to concat later:
-				selectedData.unshift({ x: storeData[i].x, y: storeData[i].y });
+				selectedData.unshift({ x: seriesData[i].x, y: seriesData[i].y });
 				
 				// Add until we get enough points to fill the required time interval:
-				if (timeInterval !== null && (selectedData[selectedData.length-1].x - selectedData[0].x) > timeInterval) {
+				if (typeof timeInterval === 'number' && (selectedData[selectedData.length-1].x - selectedData[0].x) > timeInterval) {
 					break;
 				}
 				
@@ -198,12 +198,12 @@ _.extend(PlotVisualizer.prototype, {
 		
 		var timeIntervalDefault = 10 * 1000;
 		
-		var timeInterval = (_this._options.timeInterval === null
-			? (plotData.length >= 2 ? ((plotData[plotData.length-1].x - plotData[0].x) * 1000) : timeIntervalDefault)
-			: _this._options.timeInterval
+		var timeInterval = (typeof _this._options.time_interval === 'number'
+			? _this._options.time_interval
+			: (plotData.length >= 2 ? ((plotData[plotData.length-1].x - plotData[0].x) * 1000) : timeIntervalDefault)
 		);
 		
-		var chartTickInterval = Math.ceil((timeInterval / 1000) / _this._options.tickCount);
+		var chartTickInterval = Math.ceil((timeInterval / 1000) / _this._options.tick_count);
 		
 		return chartTickInterval;
 	},
@@ -228,7 +228,7 @@ _.extend(PlotVisualizer.prototype, {
 		var _this = this;
 		
 		var plotData = _this._data;
-		var timeInterval = _this._options.timeInterval;
+		var timeInterval = _this._options.time_interval;
 		
 		// WARNING: Assuming a time-based data that comes each second, so we stub each second back until we fill the whole time interval.
 		// TODO: Either update the stubbing to support various domains or remove if we don't need it.

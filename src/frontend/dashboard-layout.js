@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('jquery');
 var _ = require('underscore');
 
@@ -30,6 +32,10 @@ _.extend(DashboardLayout.prototype, {
 		_this._layoutStore.on('layout-changed', function () {
 			_this._renderLayout();
 		});
+		
+		_this._layoutStore.on('meta-changed', function (args) {
+			_this._handleMeta(args);
+		});
 	},
 	
 	componentWillUnmount: function () {
@@ -39,20 +45,7 @@ _.extend(DashboardLayout.prototype, {
 	},
 	
 	_traverseLayout: function (layout, ctx, beforeFn, itemFn, afterFn) {
-		var _this = this,
-			items = layout.row || layout.col || [];
-		
-		if (beforeFn) { beforeFn.call(_this, ctx, layout); }
-		
-		_.each(items, function (item) {
-			if (itemFn) { itemFn.call(_this, ctx, layout, item, item.cell); }
-			
-			if (item.row || item.col) {
-				_this._traverseLayout(item, ctx, beforeFn, itemFn, afterFn);
-			}
-		});
-		
-		if (afterFn) { afterFn.call(_this, ctx, layout); }
+		this._layoutStore.traverseLayout(layout, ctx, beforeFn, itemFn, afterFn);
 	},
 	
 	_destroyLayout: function () {
@@ -112,29 +105,36 @@ _.extend(DashboardLayout.prototype, {
 					var $card = cell.$card = $('<div class="knsh-dashboard-layout-card"></div>');
 					
 					$card.appendTo($item);
-					
-					if ($.isPlainObject(cell.visualizer)) {
-						cell.visualizer = new (require('./visualizers/' + cell.visualizer.name))(_this._locator, cell.visualizer.options);
-						
-						// Note: Mount the visualizer after the layout structure is complete to avoid resizing it.
-					}
 				}
 			},
 			null
 		);
+	},
+	
+	_handleMeta: function (args) {
+		var _this = this,
+			metaUrl = args.metaUrl;
 		
-		// Note: Second-pass to mount the visualizers in a complete layout.
 		_this._traverseLayout(_this._layout, {},
 			null,
 			function (ctx, layout, item, cell) {
-				if (cell && cell.visualizer && cell.visualizer.componentDidMount) {
-					cell.visualizer.mount( cell.$card );
+				if (cell && cell.meta_url === metaUrl) {
+					var meta = _this._layoutStore.getMeta(metaUrl);
+					
+					if (!cell.visualizer) {
+						// WARNING: The visualizers must take dimensions from the layout and not stretch it, otherwise the sizes may get out of sync.
+						cell.visualizer = new (require('./visualizers/' + meta.visualizer_name))(_this._locator, meta.visualizer_options, meta.data_url);
+					
+						if (cell.visualizer.mount) {
+							cell.visualizer.mount( cell.$card );
+						}
+					}
+					
+					// TODO: Update visualizer options from meta.
 				}
 			},
 			null
 		);
-		
-		// WARNING: The visualizers must take dimensions from the layout and not stretch it, otherwise the sizes may get out of sync.
 	}
 });
 

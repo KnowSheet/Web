@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('jquery');
 var _ = require('underscore');
 var EventEmitter = require('node-event-emitter');

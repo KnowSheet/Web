@@ -1,10 +1,10 @@
 {
-  "strict":    false,
-  "eqeqeq":    true,
-  "newcap":    false,
-  "undef":     true,
-  "unused":    false,
-  "onecase":   true,
+  "globalstrict": true,
+  "eqeqeq": true,
+  "newcap": false,
+  "undef": true,
+  "unused": false,
+  "onecase": true,
   "lastsemic": true,
   "laxbreak":  true
 }
