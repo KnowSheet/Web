@@ -241,18 +241,6 @@ module.exports = function (config) {
 	}());
 	
 	return {
-		setup: function (channel) {
-			
-		},
-		
-		receive: function (channel, message) {
-			
-		},
-		
-		teardown: function (channel) {
-			
-		},
-		
 		getLayout: function () {
 			var layout = {
 				col: [
