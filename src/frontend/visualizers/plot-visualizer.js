@@ -203,7 +203,15 @@ _.extend(PlotVisualizer.prototype, {
 			: (plotData.length >= 2 ? ((plotData[plotData.length-1].x - plotData[0].x) * 1000) : timeIntervalDefault)
 		);
 		
-		var chartTickInterval = Math.ceil((timeInterval / 1000) / _this._options.tick_count);
+		var tickCount = _this._options.tick_count;
+		
+		// HACK: If the space between ticks is too small, let there be one tick per plot.
+		var minWidthBetweenTicksInPixels = 70;
+		if (_this._plotWidth > 0 && (_this._plotWidth / tickCount) < minWidthBetweenTicksInPixels) {
+			tickCount = 1;
+		}
+		
+		var chartTickInterval = Math.ceil((timeInterval / 1000) / tickCount);
 		
 		return chartTickInterval;
 	},
