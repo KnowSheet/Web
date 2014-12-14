@@ -33,6 +33,9 @@ function PlotVisualizer(locator, options, dataUrl) {
 	
 	_this._data = [];
 	
+	_this._plotWidth = 0;
+	_this._plotHeight = 0;
+	
 	var blockCssClass = 'knsh-plot-visualizer';
 	
 	var $el = _this.$el = $('<div class="' + blockCssClass + '">' +
@@ -136,14 +139,17 @@ _.extend(PlotVisualizer.prototype, {
 	_updateSize: function () {
 		var _this = this;
 		
-		var $el = _this.$el;
+		var $plotWrapper = _this.$plotWrapper;
 		var $plot = _this.$plot;
 		
 		$plot.hide();
 		
+		_this._plotWidth = $plotWrapper.width();
+		_this._plotHeight = $plotWrapper.height();
+		
 		_this._graph.configure({
-			width: $el.width(),
-			height: $el.height()
+			width: _this._plotWidth,
+			height: _this._plotHeight
 		});
 		
 		$plot.show();
