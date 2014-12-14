@@ -149,6 +149,19 @@ _store.addSeries('memory', {
 	}
 });
 
+var TEST_DATA_SERIES_COUNT = 10;
+
+(function () {
+	for (var ic = TEST_DATA_SERIES_COUNT, i = 0; i < ic; ++i) {
+		_store.addSeries('data' + i, {
+			collectFn: function (callbackFn) {
+				var now = Date.now();
+				callbackFn(Math.abs(0.6 * Math.cos(now) + 0.4 * Math.random()));
+			}
+		});
+	}
+}());
+
 
 var _writer = new Writer(_store);
 
@@ -166,6 +179,14 @@ module.exports = function (config) {
 	
 	function makeDataUrl(seriesId) {
 		return 'http://localhost:' + config.httpPort + '/data?series_id=' + seriesId;
+	}
+	
+	function makeLayoutCell(metaId) {
+		return {
+			cell: {
+				meta_url: makeMetaUrl(metaId)
+			}
+		};
 	}
 	
 	var meta = {
@@ -203,6 +224,22 @@ module.exports = function (config) {
 		}
 	};
 	
+	(function () {
+		for (var ic = TEST_DATA_SERIES_COUNT, i = 0; i < ic; ++i) {
+			meta['data' + i] = {
+				data_url: makeDataUrl('data' + i),
+				visualizer_name: 'plot-visualizer',
+				visualizer_options: {
+					header_text: 'Data ' + i,
+					color: 'blue',
+					min: 0.0,
+					max: 1.0,
+					time_interval: 10 * 1000
+				}
+			};
+		}
+	}());
+	
 	return {
 		setup: function (channel) {
 			
@@ -219,27 +256,37 @@ module.exports = function (config) {
 		getLayout: function () {
 			var layout = {
 				col: [
+					// --- Basic layout ---
 					{
 						row: [
-							{
-								cell: {
-									meta_url: makeMetaUrl('1')
-								}
-							},
-							{
-								cell: {
-									meta_url: makeMetaUrl('2')
-								}
-							}
+							makeLayoutCell('1'),
+							makeLayoutCell('2')
 						]
 					},
+					makeLayoutCell('3'),
+					
+					// --- Performance ---
+					// The same data stream:
 					{
 						row: [
-							{
-								cell: {
-									meta_url: makeMetaUrl('3')
-								}
-							}
+							makeLayoutCell('data0'),
+							makeLayoutCell('data0'),
+							makeLayoutCell('data0'),
+							makeLayoutCell('data0'),
+							makeLayoutCell('data0')
+						]
+					},
+					
+					// Different data streams:
+					{
+						row: [
+							makeLayoutCell('data0'),
+							makeLayoutCell('data1'),
+							makeLayoutCell('data2'),
+							makeLayoutCell('data3'),
+							makeLayoutCell('data4'),
+							makeLayoutCell('data5'),
+							makeLayoutCell('data6')
 						]
 					}
 				]
