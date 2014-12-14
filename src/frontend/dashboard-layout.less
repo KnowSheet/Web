@@ -39,6 +39,10 @@
 		> .knsh-dashboard-layout-group {
 			&__items {
 				.flex-direction(row);
+				
+				@media (max-width: 768px) {
+					.flex-wrap(wrap);
+				}
 			}
 		}
 	}
