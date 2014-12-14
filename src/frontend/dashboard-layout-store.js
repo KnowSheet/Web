@@ -35,6 +35,9 @@ function DashboardLayoutStore(dispatcher, backendApi) {
 	dispatcher.on('resize-window', function () {
 		_this.emit('layout-resized');
 	});
+	
+	// Silence the 'possible EventEmitter memory leak detected' warning when there are many visualizers (each subscribes to 'layout-resized').
+	_this.setMaxListeners( 200 );
 }
 inherits(DashboardLayoutStore, EventEmitter);
 _.extend(DashboardLayoutStore.prototype, {
