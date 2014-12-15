@@ -1,7 +1,9 @@
 'use strict';
 
+var location = global.location;
+
 module.exports = {
 	backend: {
-		httpUrl: 'http://localhost:3001'
+		httpBaseUrl: 'http://' + location.hostname + ':3001'
 	}
 };

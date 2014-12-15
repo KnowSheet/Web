@@ -174,11 +174,11 @@ _writer.start();
 module.exports = function (config) {
 	
 	function makeMetaUrl(metaId) {
-		return 'http://localhost:' + config.httpPort + '/meta?meta_id=' + metaId;
+		return config.httpBaseUrl + '/meta?meta_id=' + metaId;
 	}
 	
 	function makeDataUrl(seriesId) {
-		return 'http://localhost:' + config.httpPort + '/data?series_id=' + seriesId;
+		return config.httpBaseUrl + '/data?series_id=' + seriesId;
 	}
 	
 	function makeLayoutCell(metaId) {

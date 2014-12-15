@@ -26,9 +26,16 @@ function init() {
 	var dispatcher = new EventEmitter();
 	
 	var backendApi = {
+		baseUrl: config.backend.httpBaseUrl,
+		normalizeUrl: function (url) {
+			if (!/^(https?:)?\/\//.test(url)) {
+				url = this.baseUrl + url;
+			}
+			return url;
+		},
 		loadLayout: function (layoutUrl) {
 			$.ajax({
-				url: layoutUrl,
+				url: this.normalizeUrl(layoutUrl),
 				dataType: 'json'
 			}).then(function (response) {
 				var layout = response.value0;
@@ -50,7 +57,7 @@ function init() {
 		
 		loadMeta: function (metaUrl) {
 			$.ajax({
-				url: metaUrl,
+				url: this.normalizeUrl(metaUrl),
 				dataType: 'json'
 			}).then(function (response) {
 				var meta = response.value0;
@@ -71,6 +78,8 @@ function init() {
 		},
 		
 		streamData: function (dataUrl, timeInterval) {
+			var _this = this;
+			
 			var xhr;
 			var connected = false;
 			var stopping = false;
@@ -244,7 +253,7 @@ function init() {
 					}
 				};
 				
-				var requestUrl = dataUrl;
+				var requestUrl = _this.normalizeUrl(dataUrl);
 				requestUrl += (dataUrl.indexOf('?') < 0 ? '?' : '&');
 				requestUrl += 'since=' + since;
 				
@@ -280,7 +289,7 @@ function init() {
 		dispatcher.emit('resize-window');
 	}, 50));
 	
-	backendApi.loadLayout( config.backend.httpUrl + '/layout' );
+	backendApi.loadLayout( '/layout' );
 	
 	console.log(logPrefix + 'Initialized at ' + (new Date()));
 }
