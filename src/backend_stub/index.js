@@ -82,7 +82,7 @@ module.exports = {
 			res.setHeader('Transfer-Encoding', 'chunked');
 			
 			// Write some data to flush the headers:
-			writeChunk({});
+			writeJson({});
 			
 			logger.info(streamLogPrefix + 'Headers sent.');
 			
@@ -105,15 +105,40 @@ module.exports = {
 			stream = logic.streamData(req.query, function (chunk) {
 				logger.info(streamLogPrefix + 'Sending ' + chunk.value0.data.length + ' samples.');
 				
-				writeChunk(chunk);
+				writeJson(chunk);
 			}, {
 				logPrefix: streamLogPrefix
 			});
 			
-			function writeChunk(chunk) {
-				var chunkString = JSON.stringify(chunk);
+			function escapeString(data) {
+				// HACK: Quick & dirty way to escape special chars:
+				return JSON.stringify(data).replace(/^"|"$/g, '').replace(/\\"/g, '"');
+			}
+			
+			function writeChunk(chunkString) {
+				logger.info(streamLogPrefix + 'Writing chunk: ' + escapeString(chunkString));
 				
+				// Conforms to the `Transfer-Encoding: chunked` specs: chunk length in hex, CRLF, chunk body, CRLF.
 				res.write(chunkString.length.toString(16) + "\r\n" + chunkString + "\r\n");
+			}
+			
+			function writeJson(payload) {
+				// Serialize the payload, add the payload separator.
+				var payloadString = JSON.stringify(payload) + "\n";
+				
+				logger.info(streamLogPrefix + 'Splitting payload: ' + escapeString(payloadString));
+				
+				// Split into chunks of random length.
+				var splitStart = 0;
+				var splitEnd = 0;
+				
+				while (splitStart < payloadString.length) {
+					splitEnd = splitStart + Math.ceil(Math.random() * (payloadString.length - splitStart));
+					
+					writeChunk(payloadString.substring(splitStart, splitEnd));
+					
+					splitStart = splitEnd;
+				}
 			}
 		});
 		
