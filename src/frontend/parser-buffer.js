@@ -5,9 +5,16 @@ var _ = require('underscore');
 
 /**
  * Provides low-level utility to manage a buffer for a stream string parser.
+ * Shifts the buffer when the specified amount of characters has been consumed via `advance`.
+ *
+ * @param {number} [options.bufferShiftLength=2048] The number of characters to keep in the buffer until next shift.
  */
-function ParserBuffer() {
+function ParserBuffer(options) {
 	var _this = this;
+	
+	_this._options = _.extend({
+		bufferShiftLength: 2048
+	}, options);
 	
 	_this.reset();
 }
@@ -32,6 +39,7 @@ _.extend(ParserBuffer.prototype, {
 		
 		_this._buffer = '';
 		_this._readIndex = 0;
+		_this._advanceLength = 0;
 	},
 	
 	/**
@@ -42,7 +50,7 @@ _.extend(ParserBuffer.prototype, {
 	getConsumedLength: function () {
 		var _this = this;
 		
-		return _this._readIndex;
+		return (_this._readIndex + _this._advanceLength);
 	},
 	
 	/**
@@ -65,16 +73,17 @@ _.extend(ParserBuffer.prototype, {
 	peekUntil: function (delimiter) {
 		var _this = this;
 		
-		var index = (delimiter
-			? _this._buffer.indexOf(delimiter, _this._readIndex)
+		var startIndex = _this._readIndex;
+		var endIndex = (delimiter
+			? _this._buffer.indexOf(delimiter, startIndex)
 			: _this._buffer.length - 1
 		);
 		
-		if (index < 0) {
+		if (endIndex < 0) {
 			return false;
 		}
 		
-		var data = _this.peek(index - _this._readIndex);
+		var data = _this.peek(endIndex - startIndex);
 		
 		return data;
 	},
@@ -92,14 +101,15 @@ _.extend(ParserBuffer.prototype, {
 	peek: function (length, skip) {
 		var _this = this;
 		
-		if (typeof skip === 'undefined') {
+		if (typeof skip === 'undefined' || skip < 0) {
 			skip = 0;
 		}
 		
-		var startIndex = _this._readIndex + skip;
-		var endIndex = startIndex + length;
+		var startIndex = (_this._readIndex + skip);
+		var endIndex = (startIndex + length);
 		
-		if (endIndex > _this._buffer.length) {
+		// The end index may reach the buffer length to read to the buffer end:
+		if (endIndex < startIndex || endIndex > _this._buffer.length) {
 			return false;
 		}
 		
@@ -118,11 +128,20 @@ _.extend(ParserBuffer.prototype, {
 	advance: function (length) {
 		var _this = this;
 		
+		// The read index may reach the buffer length, this would indicate there is no more characters to read:
 		if ((_this._readIndex + length) > _this._buffer.length) {
 			return false;
 		}
 		
 		_this._readIndex += length;
+		
+		// Shift the buffer so the consumed part does not occupy memory:
+		var bufferShiftLength = _this._options.bufferShiftLength;
+		if (bufferShiftLength > 0 && _this._readIndex >= bufferShiftLength) {
+			_this._buffer = _this._buffer.substring(bufferShiftLength);
+			_this._readIndex -= bufferShiftLength;
+			_this._advanceLength += bufferShiftLength;
+		}
 		
 		return true;
 	},
