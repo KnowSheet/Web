@@ -139,6 +139,7 @@ function init() {
 					});
 				}
 			});
+			jsonPerLineParser.on('error', reconnectOnError);
 			
 			persistentConnection.connect(_this.normalizeUrl(dataUrl), queryParams);
 			
