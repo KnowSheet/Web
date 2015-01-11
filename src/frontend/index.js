@@ -103,12 +103,15 @@ function init() {
 			});
 			
 			function reconnectOnError() {
-				jsonPerLineParser.reset();
 				if (!stopping && !persistentConnection.isConnecting()) {
 					persistentConnection.reconnect();
 				}
 			}
 			
+			persistentConnection.on('connected', function (data) {
+				chunkParser.reset();
+				jsonPerLineParser.reset();
+			});
 			persistentConnection.on('data', function (data) {
 				chunkParser.write(data);
 			});
