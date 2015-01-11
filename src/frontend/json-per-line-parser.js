@@ -84,7 +84,13 @@ _.extend(JsonPerLineParser.prototype, {
 		var _this = this;
 		
 		while (true) {
-			if (_this._parseJson() !== R_CONTINUE) {
+			switch (_this._state) {
+			case S_JSON:
+				if (_this._parseJson() !== R_CONTINUE) {
+					return;
+				}
+				break;
+			default:
 				return;
 			}
 		}
