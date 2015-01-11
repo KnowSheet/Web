@@ -116,9 +116,7 @@ _.extend(JsonPerLineParser.prototype, {
 		if (typeof jsonObject === 'undefined') {
 			_this._state = S_ERROR;
 			
-			_this._onError(new Error('Expected "' +
-				_this._buffer.escapeString(separator) +
-				'" (separator), got "' +
+			_this._onError(new Error('Expected a valid JSON value, got "' +
 				_this._buffer.escapeString(jsonString) +
 				'" near "' +
 				_this._buffer.getContextString() +
