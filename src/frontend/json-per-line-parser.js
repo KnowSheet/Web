@@ -11,14 +11,12 @@ var console = global.console;
 
 // Parser states:
 var S_ERROR = 1;
-var S_END = 2;
-var S_JSON = 3;
+var S_JSON = 2;
 
 // Parser result codes:
 var R_CONTINUE = 1;
 var R_NEED_DATA = 2;
 var R_ERROR = 3;
-var R_END = 4;
 
 
 /**
@@ -28,20 +26,19 @@ var R_END = 4;
  * @param {string} [options.logPrefix=''] The prefix to add to the console messages.
  * @param {string} [options.separator=''] The separator between the JSON objects. If non-empty, the parser fails on missing separator.
  */
-function ChunkJsonParser(options) {
+function JsonPerLineParser(options) {
 	var _this = this;
 	
 	_this._options = _.extend({
-		logPrefix: '',
-		separator: ''
+		logPrefix: ''
 	}, options);
 	
 	_this._buffer = new ParserBuffer();
 	
 	_this.reset();
 }
-inherits(ChunkJsonParser, EventEmitter);
-_.extend(ChunkJsonParser.prototype, {
+inherits(JsonPerLineParser, EventEmitter);
+_.extend(JsonPerLineParser.prototype, {
 	
 	/**
 	 * Adds data to the parser.
@@ -96,64 +93,33 @@ _.extend(ChunkJsonParser.prototype, {
 	_parseJson: function () {
 		var _this = this;
 		
-		var separator = _this._options.separator;
+		var separator = "\n";
 		
-		var data = _this._buffer.peek(1);
+		var jsonString = _this._buffer.peekUntil(separator);
 		
-		if (data === false) {
+		if (jsonString === false) {
 			return R_NEED_DATA;
 		}
 		
-		// Trying to find the longest parseable JSON string:
-		var firstToken = data;
-		var lastToken;
-		
-		if (firstToken === '{') {
-			lastToken = '}';
-		}
-		else if (firstToken === '[') {
-			lastToken = ']';
-		}
-		
-		var lastTokenIndex = _this._buffer.getRemainingLength();
-		data = _this._buffer.peek(lastTokenIndex);
-		
-		var jsonString;
 		var jsonObject;
-		while (lastTokenIndex > 0 && typeof jsonObject === 'undefined') {
-			jsonString = data.substring(0, lastTokenIndex + lastToken.length);
-			
-			try {
-				jsonObject = JSON.parse(jsonString);
-			}
-			catch (ex) {}
-			
-			if (typeof lastToken !== 'undefined') {
-				lastTokenIndex = data.lastIndexOf(lastToken, lastTokenIndex - lastToken.length);
-			}
-			else {
-				lastTokenIndex -= 1;
-			}
+		try {
+			jsonObject = JSON.parse(jsonString);
 		}
+		catch (ex) {}
 		
 		if (typeof jsonObject === 'undefined') {
-			// If parse failed, just wait for more data:
-			return R_NEED_DATA;
-		}
-		
-		if (separator.length > 0) {
-			// Read the following separator:
-			data = _this._buffer.peek(separator.length, jsonString.length);
-		
-			if (data === false) {
-				return R_NEED_DATA;
-			}
-		
-			if (data !== separator) {
-				_this._state = S_ERROR;
-				_this._onError(new Error('Expected "' + _this._buffer.escapeString(separator) + '" (separator), got "' + _this._buffer.escapeString(data) + '" near "' + _this._buffer.getContextString() + '".'));
-				return R_ERROR;
-			}
+			_this._state = S_ERROR;
+			
+			_this._onError(new Error('Expected "' +
+				_this._buffer.escapeString(separator) +
+				'" (separator), got "' +
+				_this._buffer.escapeString(jsonString) +
+				'" near "' +
+				_this._buffer.getContextString() +
+				'".'
+			));
+			
+			return R_ERROR;
 		}
 		
 		_this._onData(jsonObject);
@@ -167,4 +133,4 @@ _.extend(ChunkJsonParser.prototype, {
 	}
 });
 
-module.exports = ChunkJsonParser;
+module.exports = JsonPerLineParser;

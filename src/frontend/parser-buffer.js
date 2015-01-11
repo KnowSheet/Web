@@ -65,7 +65,10 @@ _.extend(ParserBuffer.prototype, {
 	peekUntil: function (delimiter) {
 		var _this = this;
 		
-		var index = _this._buffer.indexOf(delimiter, _this._readIndex);
+		var index = (delimiter
+			? _this._buffer.indexOf(delimiter, _this._readIndex)
+			: _this._buffer.length - 1
+		);
 		
 		if (index < 0) {
 			return false;

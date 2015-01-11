@@ -6,7 +6,7 @@ var EventEmitter = require('node-event-emitter');
 
 var PersistentConnection = require('./persistent-connection');
 var ChunkParser = require('./chunk-parser');
-var ChunkJsonParser = require('./chunk-json-parser');
+var JsonPerLineParser = require('./json-per-line-parser');
 
 var Dashboard = require('./dashboard');
 var DashboardDataStore = require('./dashboard-data-store');
@@ -98,13 +98,12 @@ function init() {
 				logPrefix: 	logPrefix + ' [' + dataUrl + '] [ChunkParser] '
 			});
 			
-			var chunkJsonParser = new ChunkJsonParser({
-				logPrefix: 	logPrefix + ' [' + dataUrl + '] [ChunkJsonParser] ',
-				separator: "\n"
+			var jsonPerLineParser = new JsonPerLineParser({
+				logPrefix: 	logPrefix + ' [' + dataUrl + '] [JsonPerLineParser] '
 			});
 			
 			function reconnectOnError() {
-				chunkJsonParser.reset();
+				jsonPerLineParser.reset();
 				if (!stopping && !persistentConnection.isConnecting()) {
 					persistentConnection.reconnect();
 				}
@@ -117,12 +116,12 @@ function init() {
 			persistentConnection.on('error', reconnectOnError);
 			
 			chunkParser.on('data', function (data) {
-				chunkJsonParser.write(data);
+				jsonPerLineParser.write(data);
 			});
 			chunkParser.on('end', reconnectOnError);
 			chunkParser.on('error', reconnectOnError);
 			
-			chunkJsonParser.on('data', function (data) {
+			jsonPerLineParser.on('data', function (data) {
 				data = (data && data.value0 && data.value0.data);
 				
 				if (data && data.length > 0) {
