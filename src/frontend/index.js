@@ -86,8 +86,12 @@ function init() {
 			
 			var stopping = false;
 			
+			if (typeof timeInterval !== 'number' || timeInterval < 0) {
+				timeInterval = 0;
+			}
+			
 			var queryParams = {
-				since: ((new Date()).getTime() - (typeof timeInterval !== 'number' ? 0 : timeInterval))
+				since: ((new Date()).getTime() - timeInterval)
 			};
 			
 			var persistentConnection = new PersistentConnection({
@@ -128,7 +132,8 @@ function init() {
 				data = (data && data.value0 && data.value0.data);
 				
 				if (data && data.length > 0) {
-					// Advance the time that will go in the next request to the latest data sample time (add 1 to avoid duplicates):
+					// Advance the time that will go in the next request
+					// to the latest data sample time (add 1 to avoid duplicates):
 					queryParams.since = data[data.length-1].x + 1;
 					persistentConnection.setQuery(queryParams);
 					

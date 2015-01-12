@@ -42,7 +42,8 @@ function DashboardDataStore(dispatcher, backendApi) {
 		_this._handleData(args);
 	});
 	
-	// Silence the 'possible EventEmitter memory leak detected' warning when there are many visualizers (each subscribes to 'data-updated').
+	// Silence the 'possible EventEmitter memory leak detected' warning
+	// when there are many visualizers (each subscribes to 'data-updated').
 	_this.setMaxListeners( 200 );
 }
 inherits(DashboardDataStore, EventEmitter);

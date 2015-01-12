@@ -5,7 +5,8 @@ var _ = require('underscore');
 
 /**
  * Provides low-level utility to manage a buffer for a stream string parser.
- * Shifts the buffer when the specified amount of characters has been consumed via `advance`.
+ * Shifts the buffer when the specified amount of characters has been
+ * consumed via `advance`.
  *
  * @param {number} [options.bufferShiftLength=2048] The number of characters to keep in the buffer until next shift.
  */
@@ -43,7 +44,8 @@ _.extend(ParserBuffer.prototype, {
 	},
 	
 	/**
-	 * Returns the number of string characters that has been consumed via `advance` since last reset or instantiation.
+	 * Returns the number of string characters that has been consumed
+	 * via `advance` since last reset or instantiation.
 	 *
 	 * @return {number} The number of string characters consumed.
 	 */
@@ -65,7 +67,7 @@ _.extend(ParserBuffer.prototype, {
 	},
 	
 	/**
-	 * Returns the part of the buffer till the first occurrence of the specified delimiter.
+	 * Returns the part of the buffer till the first occurrence of the delimiter.
 	 * If the delimiter is not found in the buffer, returns `false`.
 	 *
 	 * @return {string|boolean}
@@ -119,7 +121,8 @@ _.extend(ParserBuffer.prototype, {
 	},
 	
 	/**
-	 * Moves the internal pointer of the buffer forward by the specified number of string characters.
+	 * Moves the internal pointer of the buffer forward
+	 * by the specified number of string characters.
 	 *
 	 * @param {number} length The number of string characters to advance by.
 	 *
@@ -128,7 +131,8 @@ _.extend(ParserBuffer.prototype, {
 	advance: function (length) {
 		var _this = this;
 		
-		// The read index may reach the buffer length, this would indicate there is no more characters to read:
+		// The read index may reach the buffer length, 
+		// this would indicate there is no more characters to read:
 		if ((_this._readIndex + length) > _this._buffer.length) {
 			return false;
 		}
@@ -188,7 +192,11 @@ _.extend(ParserBuffer.prototype, {
 	 */
 	escapeStringForLogging: function (data) {
 		// HACK: Quick & dirty way to escape special chars:
-		return JSON.stringify(String(data)).replace(/^"|"$/g, '').replace(/\\"/g, '"');
+		return (
+			JSON.stringify(String(data))
+				.replace(/^"|"$/g, '')
+				.replace(/\\"/g, '"')
+		);
 	}
 });
 

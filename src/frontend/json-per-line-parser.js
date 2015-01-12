@@ -99,7 +99,7 @@ _.extend(JsonPerLineParser.prototype, {
 	_parseJson: function () {
 		var _this = this;
 		
-		var separator = "\n";
+		var separator = '\n';
 		
 		var jsonString = _this._buffer.peekUntil(separator);
 		

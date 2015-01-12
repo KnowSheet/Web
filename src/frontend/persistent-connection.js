@@ -182,8 +182,12 @@ _.extend(PersistentConnection.prototype, {
 		
 		var readIndex = 0;
 		
-		xhr.onload = xhr.onabort = xhr.onerror = function (event) {
-			_this._dropConnection(event && event.type === 'load' ? null : new Error());
+		xhr.onload = function (event) {
+			_this._dropConnection();
+		};
+		
+		xhr.onabort = xhr.onerror = function (event) {
+			_this._dropConnection(new Error());
 		};
 		
 		xhr.onreadystatechange = function () {
@@ -228,7 +232,8 @@ _.extend(PersistentConnection.prototype, {
 		_this._xhr = null;
 		
 		if (xhr) {
-			// Clear the handlers to prevent memory leaks and prevent the handlers from being called on abort:
+			// Clear the handlers to prevent memory leaks and
+			// prevent the handlers from being called on abort:
 			xhr.onload = xhr.onabort = xhr.onerror = xhr.onreadystatechange = null;
 			
 			// Abort the connection (no-op if not needed):
