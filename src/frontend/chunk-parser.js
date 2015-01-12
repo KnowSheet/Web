@@ -128,7 +128,7 @@ _.extend(ChunkParser.prototype, {
 		// If we cannot parse the length, it's an error:
 		if (isNaN(_this._chunkLength) || _this._chunkLength < 0) {
 			_this._state = S_ERROR;
-			_this._onError(new Error('Expected hexadecimal chunk length, got "' + _this._buffer.escapeString(data) + '" near "' + _this._buffer.getContextString() + '".'));
+			_this._onError(new Error('Expected hexadecimal chunk length, got "' + _this._buffer.escapeStringForLogging(data) + '" near "' + _this._buffer.getContextString() + '".'));
 			return R_ERROR;
 		}
 		
@@ -169,7 +169,7 @@ _.extend(ChunkParser.prototype, {
 		
 		if (data !== CRLF) {
 			_this._state = S_ERROR;
-			_this._onError(new Error('Expected \\r\\n (CRLF), got "' + _this._buffer.escapeString(data) + '" near "' + _this._buffer.getContextString() + '".'));
+			_this._onError(new Error('Expected \\r\\n (CRLF), got "' + _this._buffer.escapeStringForLogging(data) + '" near "' + _this._buffer.getContextString() + '".'));
 			return R_ERROR;
 		}
 		

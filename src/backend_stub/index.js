@@ -110,13 +110,13 @@ module.exports = {
 				logPrefix: streamLogPrefix
 			});
 			
-			function escapeString(data) {
+			function escapeStringForLogging(data) {
 				// HACK: Quick & dirty way to escape special chars:
-				return JSON.stringify(data).replace(/^"|"$/g, '').replace(/\\"/g, '"');
+				return JSON.stringify(String(data)).replace(/^"|"$/g, '').replace(/\\"/g, '"');
 			}
 			
 			function writeChunk(chunkString) {
-				logger.info(streamLogPrefix + 'Writing chunk: ' + escapeString(chunkString));
+				logger.info(streamLogPrefix + 'Writing chunk: ' + escapeStringForLogging(chunkString));
 				
 				// Conforms to the `Transfer-Encoding: chunked` specs: chunk length in hex, CRLF, chunk body, CRLF.
 				res.write(chunkString.length.toString(16) + "\r\n" + chunkString + "\r\n");
@@ -126,7 +126,7 @@ module.exports = {
 				// Serialize the payload, add the payload separator.
 				var payloadString = JSON.stringify(payload) + "\n";
 				
-				logger.info(streamLogPrefix + 'Splitting payload: ' + escapeString(payloadString));
+				logger.info(streamLogPrefix + 'Splitting payload: ' + escapeStringForLogging(payloadString));
 				
 				// Split into chunks of random length.
 				var splitStart = 0;

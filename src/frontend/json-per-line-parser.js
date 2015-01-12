@@ -117,7 +117,7 @@ _.extend(JsonPerLineParser.prototype, {
 			_this._state = S_ERROR;
 			
 			_this._onError(new Error('Expected a valid JSON value, got "' +
-				_this._buffer.escapeString(jsonString) +
+				_this._buffer.escapeStringForLogging(jsonString) +
 				'" near "' +
 				_this._buffer.getContextString() +
 				'".'

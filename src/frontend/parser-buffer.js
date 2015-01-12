@@ -165,7 +165,7 @@ _.extend(ParserBuffer.prototype, {
 		var context = _this.peek(Math.min(_this.getRemainingLength(), contextLength));
 		
 		if (context.length > 0) {
-			ret += _this.escapeString(context);
+			ret += _this.escapeStringForLogging(context);
 		}
 		
 		if ((_this.getRemainingLength() - context.length) > 0) {
@@ -186,7 +186,7 @@ _.extend(ParserBuffer.prototype, {
 	 *
 	 * @return {string}
 	 */
-	escapeString: function (data) {
+	escapeStringForLogging: function (data) {
 		// HACK: Quick & dirty way to escape special chars:
 		return JSON.stringify(String(data)).replace(/^"|"$/g, '').replace(/\\"/g, '"');
 	}
