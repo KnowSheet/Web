@@ -27,7 +27,7 @@ var R_END = 4;
 /**
  * Performs parsing of `Transfer-Encoding: chunked` chunks.
  * Emits a 'data' event when a chunk body is parsed out.
- * Does not perform parsing of the chunk data (see `chunk-json-parser` module).
+ * Does not perform parsing of the chunk data itself.
  *
  * @param {string} [options.logPrefix=''] The prefix to add to the console messages.
  */
