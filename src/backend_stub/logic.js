@@ -221,6 +221,16 @@ module.exports = function (config) {
 				max: 1.0,
 				time_interval: 20 * 1000
 			}
+		},
+		"4": {
+			data_url: makeDataUrl('cpu'),
+			visualizer_name: 'value-visualizer',
+			visualizer_options: {
+				header_text: 'CPU Load Value',
+				min: 0.0,
+				max: 1.0,
+				time_interval: 1000
+			}
 		}
 	};
 	
@@ -248,7 +258,8 @@ module.exports = function (config) {
 					{
 						row: [
 							makeLayoutCell('1'),
-							makeLayoutCell('2')
+							makeLayoutCell('2'),
+							makeLayoutCell('4')
 						]
 					},
 					makeLayoutCell('3'),
