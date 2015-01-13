@@ -206,14 +206,20 @@ _.extend(PlotVisualizer.prototype, {
 		
 		var timeInterval = (typeof _this._options.time_interval === 'number'
 			? _this._options.time_interval
-			: (plotData.length >= 2 ? ((plotData[plotData.length-1].x - plotData[0].x) * 1000) : timeIntervalDefault)
+			: (plotData.length >= 2
+				? ((plotData[plotData.length-1].x - plotData[0].x) * 1000)
+				: timeIntervalDefault
+			)
 		);
 		
 		var tickCount = _this._options.tick_count;
 		
 		// HACK: If the space between ticks is too small, let there be one tick per plot.
 		var minWidthBetweenTicksInPixels = 70;
-		if (_this._plotWidth > 0 && (_this._plotWidth / tickCount) < minWidthBetweenTicksInPixels) {
+		if (
+			_this._plotWidth > 0 &&
+			(_this._plotWidth / tickCount) < minWidthBetweenTicksInPixels
+		) {
 			tickCount = 1;
 		}
 		
@@ -244,8 +250,10 @@ _.extend(PlotVisualizer.prototype, {
 		var plotData = _this._data;
 		var timeInterval = _this._options.time_interval;
 		
-		// WARNING: Assuming a time-based data that comes each second, so we stub each second back until we fill the whole time interval.
-		// TODO: Either update the stubbing to support various domains or remove if we don't need it.
+		// WARNING: Assuming a time-based data that comes each second,
+		// so we stub each second back until we fill the whole time interval.
+		
+		// TODO: Remove the stubbing when proper backend with historical data is ready.
 		
 		var nowX = (new Date()).getTime();
 		

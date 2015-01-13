@@ -21,11 +21,11 @@ module.exports = {
 		/* DEBUG: For testing connection outage. */
 		// Maintain a hash of all connected sockets:
 		var sockets = {}, nextSocketId = 0;
-		var appServerStopping = false;
+		var appServerRestarting = false;
 		app.get('/_restart', cors(), function (req, res) {
 			res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
 			
-			if (appServerStopping) {
+			if (appServerRestarting) {
 				res.write('Sir, I\'m already restarting...\n');
 				res.end();
 				return;
@@ -34,24 +34,27 @@ module.exports = {
 			res.write('Sir, yes, sir!\n');
 			res.end();
 			
-			appServerStopping = true;
 			logger.info('HTTP server restart requested.');
 			process.nextTick(function () {
 				if (appServer) {
+					appServerRestarting = true;
+					
+					// Stop the server (waits for all sockets to close).
 					appServer.close(function () {
-						logger.info('HTTP server stopped.');
-						appServerStopping = false;
-						
 						var restartInterval = 5000;
-						logger.info('HTTP server will restart in ' + restartInterval + 'ms.');
+						
+						logger.info('HTTP server will restart in ' +
+							restartInterval + 'ms.');
+						
 						setTimeout(function () {
 							logger.info('HTTP server restarting...');
 							appStart();
 						}, restartInterval);
 					});
+					
 					appServer = null;
 					
-					// Destroy all open sockets
+					// Destroy all open sockets:
 					for (var socketId in sockets) {
 						sockets[socketId].destroy();
 					}
@@ -73,7 +76,10 @@ module.exports = {
 		app.get('/data', cors(), function (req, res) {
 			++nextStreamIndex;
 			
-			var streamLogPrefix = '[' + req.query.series_id + ';' + req.query.since + '] (' + nextStreamIndex + ') ';
+			var streamLogPrefix = '';
+			streamLogPrefix += '[' + req.query.series_id + ';' + req.query.since + '] ';
+			streamLogPrefix += '(' + nextStreamIndex + ') ';
+			
 			var stream;
 			
 			logger.info(streamLogPrefix + 'Client connected.');
@@ -82,11 +88,11 @@ module.exports = {
 			res.setHeader('Transfer-Encoding', 'chunked');
 			
 			// Write some data to flush the headers:
-			writeChunk({});
+			writeJson({});
 			
 			logger.info(streamLogPrefix + 'Headers sent.');
 			
-			req.on("close", function () {
+			req.on('close', function () {
 				logger.info(streamLogPrefix + 'Client disconnected unexpectedly.');
 				if (stream) {
 					stream.stop();
@@ -94,7 +100,7 @@ module.exports = {
 				}
 			});
 			
-			req.on("end", function () {
+			req.on('end', function () {
 				logger.info(streamLogPrefix + 'Client disconnected.');
 				if (stream) {
 					stream.stop();
@@ -103,24 +109,73 @@ module.exports = {
 			});
 			
 			stream = logic.streamData(req.query, function (chunk) {
-				logger.info(streamLogPrefix + 'Sending ' + chunk.value0.data.length + ' samples.');
+				logger.info(streamLogPrefix + 'Sending ' +
+					chunk.value0.data.length +
+					' samples.');
 				
-				writeChunk(chunk);
+				writeJson(chunk);
 			}, {
 				logPrefix: streamLogPrefix
 			});
 			
-			function writeChunk(chunk) {
-				var chunkString = JSON.stringify(chunk);
+			function escapeStringForLogging(data) {
+				// HACK: Quick & dirty way to escape special chars:
+				return (
+					JSON.stringify(String(data))
+						.replace(/^"|"$/g, '')
+						.replace(/\\"/g, '"')
+				);
+			}
+			
+			function writeChunk(chunkString) {
+				logger.info(streamLogPrefix + 'Writing chunk: ' +
+					escapeStringForLogging(chunkString));
 				
-				res.write(chunkString.length.toString(16) + "\r\n" + chunkString + "\r\n");
+				// Conforms to the `Transfer-Encoding: chunked` specs:
+				// chunk length in hex, CRLF, chunk body, CRLF.
+				res.write(
+					chunkString.length.toString(16) + "\r\n" +
+					chunkString + "\r\n"
+				);
+			}
+			
+			function writeJson(payload) {
+				// Serialize the payload, add the payload separator.
+				var payloadString = JSON.stringify(payload) + "\n";
+				
+				logger.info(streamLogPrefix + 'Splitting payload: ' +
+					escapeStringForLogging(payloadString));
+				
+				// Split into chunks of random length.
+				var splitStart = 0;
+				var splitEnd = 0;
+				
+				while (splitStart < payloadString.length) {
+					splitEnd = (
+						splitStart +
+						Math.ceil(Math.random() * (payloadString.length - splitStart))
+					);
+					
+					writeChunk(payloadString.substring(splitStart, splitEnd));
+					
+					splitStart = splitEnd;
+				}
 			}
 		});
 		
 		function appStart() {
 			appServer = app.listen(config.httpPort);
-			logger.info('HTTP server listening at http://localhost:' + config.httpPort);
-		
+			
+			appServer.on('listening', function () {
+				appServerRestarting = false;
+				logger.info('HTTP server listening at ' +
+					'http://localhost:' + config.httpPort
+				);
+			});
+			appServer.on('close', function () {
+				logger.info('HTTP server stopped.');
+			});
+			
 			/* DEBUG: For testing connection outage. */
 			appServer.on('connection', function (socket) {
 				// Add a newly connected socket:
@@ -136,8 +191,15 @@ module.exports = {
 		
 		appStart();
 		
-		express(http.createServer()).use(serveStatic(config.staticPath)).listen(config.staticPort);
-		logger.info('Static files server listening at http://localhost:' + config.staticPort);
+		var staticServer = express(http.createServer())
+			.use(serveStatic(config.staticPath))
+			.listen(config.staticPort);
+		
+		staticServer.on('listening', function () {
+			logger.info('Static files server listening at ' +
+				'http://localhost:' + config.staticPort
+			);
+		});
 	}
 };
 

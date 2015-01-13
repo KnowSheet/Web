@@ -122,9 +122,16 @@ _.extend(DashboardLayout.prototype, {
 					var meta = _this._layoutStore.getMeta(metaUrl);
 					
 					if (!cell.visualizer) {
-						// WARNING: The visualizers must take dimensions from the layout and not stretch it, otherwise the sizes may get out of sync.
-						cell.visualizer = new (require('./visualizers/' + meta.visualizer_name))(_this._locator, meta.visualizer_options, meta.data_url);
-					
+						var Visualizer = require('./visualizers/' + meta.visualizer_name);
+						
+						// WARNING: The visualizers must take dimensions from the layout
+						// and not stretch it, otherwise the sizes may get out of sync.
+						cell.visualizer = new Visualizer(
+							_this._locator,
+							meta.visualizer_options,
+							meta.data_url
+						);
+						
 						if (cell.visualizer.mount) {
 							cell.visualizer.mount( cell.$card );
 						}
