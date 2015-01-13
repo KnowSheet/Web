@@ -20,8 +20,7 @@ function ValueVisualizer(locator, options, dataUrl) {
 		header_text: '',
 		min: 0.0,
 		max: 1.0,
-		fraction_digits_min: 4,
-		fraction_digits_max: 4,
+		fraction_digits: 4,
 		low_is_bad: false
 	}, options);
 	
@@ -82,11 +81,7 @@ _.extend(ValueVisualizer.prototype, {
 	_formatValue: function (value) {
 		var _this = this;
 		
-		var power = Math.pow(10, _this._options.fraction_digits_max);
-		
-		var rounded = ( Math.round(value * power) / power );
-		
-		return String( rounded.toFixed(_this._options.fraction_digits_min) );
+		return value.toFixed(_this._options.fraction_digits);
 	},
 	
 	_getValueColor: function (value) {
