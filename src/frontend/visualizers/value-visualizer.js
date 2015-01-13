@@ -12,10 +12,7 @@ require('./value-visualizer.less');
 function ValueVisualizer(locator, options, dataUrl) {
 	var _this = this;
 	
-	_this._locator = locator;
-	
-	_this._layoutStore = _this._locator.getLayoutStore();
-	_this._dataStore = _this._locator.getDataStore();
+	_this._dataStore = locator.getDataStore();
 	
 	_this._dataUrl = dataUrl;
 	
