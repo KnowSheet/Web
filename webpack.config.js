@@ -11,7 +11,7 @@ module.exports = {
 	output: {
 		path: path.join(__dirname, "build"),
 		publicPath: "/",
-		filename: "app/[name].js?[chunkhash]"
+		filename: "[name].js?[chunkhash]"
 	},
 	entry: {
 		app: "./src/frontend/index.js",
@@ -55,7 +55,7 @@ module.exports = {
 		extensions: ["", ".js"]
 	},
 	plugins: [
-		new webpack.optimize.CommonsChunkPlugin("vendor", "libs/[name].js?[chunkhash]"),
+		new webpack.optimize.CommonsChunkPlugin("vendor", "[name].js?[chunkhash]"),
 		// TODO: Add `new webpack.optimize.UglifyJsPlugin({}),`, make it not break the code (currently it breaks).
 		new HtmlWebpackPlugin({
 			template: './src/frontend/index.blueimp.html'
