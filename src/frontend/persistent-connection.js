@@ -6,7 +6,8 @@ var EventEmitter = require('node-event-emitter');
 var inherits = require('inherits');
 var assert = require('assert');
 
-var console = global.console;
+var logger = require('./logger');
+
 var setTimeout = global.setTimeout;
 var clearTimeout = global.clearTimeout;
 var XMLHttpRequest = global.XMLHttpRequest;
@@ -17,7 +18,7 @@ var XMLHttpRequest = global.XMLHttpRequest;
  * Emits a 'data' event when some data is received through the persistent connection.
  * Provides methods to reconnect if required, and maintains reconnect delays.
  *
- * @param {string} [options.logPrefix=''] The prefix to add to the console messages.
+ * @param {string} [options.logPrefix=''] The prefix to add to the log messages.
  * @param {number} [options.reconnectDelay=2000] The initial reconnect delay.
  * @param {number} [options.reconnectDelayCoeff=1.1] The multiplier to apply to the delay for the next reconnect.
  */
@@ -132,35 +133,35 @@ _.extend(PersistentConnection.prototype, {
 	},
 	
 	_onConnecting: function () {
-		console.log(this._options.logPrefix + 'Connecting...');
+		logger.log(this._options.logPrefix + 'Connecting...');
 		this.emit('connecting');
 	},
 	
 	_onConnected: function () {
-		console.log(this._options.logPrefix + 'Connected.');
+		logger.log(this._options.logPrefix + 'Connected.');
 		this.emit('connected');
 	},
 	
 	_onReconnectScheduled: function (args) {
-		console.warn(this._options.logPrefix + 'Will reconnect in ' + args.reconnectDelay + 'ms.');
+		logger.warn(this._options.logPrefix + 'Will reconnect in ' + args.reconnectDelay + 'ms.');
 	},
 	
 	_onReconnecting: function () {
-		console.warn(this._options.logPrefix + 'Reconnecting...');
+		logger.warn(this._options.logPrefix + 'Reconnecting...');
 	},
 	
 	_onData: function (data) {
-		console.log(this._options.logPrefix + 'Data:', data);
+		logger.log(this._options.logPrefix + 'Data:', data);
 		this.emit('data', data);
 	},
 	
 	_onEnd: function () {
-		console.warn(this._options.logPrefix + 'End.');
+		logger.warn(this._options.logPrefix + 'End.');
 		this.emit('end');
 	},
 	
 	_onError: function (error) {
-		console.error(this._options.logPrefix + 'Error:', error);
+		logger.error(this._options.logPrefix + 'Error:', error);
 		this.emit('error', error);
 	},
 	

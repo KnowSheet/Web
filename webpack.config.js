@@ -6,12 +6,14 @@ var _ = require("underscore");
 
 var jshintConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '.jshintrc')));
 
-module.exports = {
+var isProduction = (process.env.NODE_ENV === "production");
+
+var webpackConfig = {
 	context: __dirname,
 	output: {
-		path: path.join(__dirname, "build"),
+		path: path.join(__dirname, (isProduction ? "build" : "build-dev")),
 		publicPath: "/",
-		filename: "app/[name].js?[chunkhash]"
+		filename: "[name].js?[chunkhash]"
 	},
 	entry: {
 		app: "./src/frontend/index.js",
@@ -44,10 +46,10 @@ module.exports = {
 	},
 	resolve: {
 		alias: {
-			"jquery": path.join(__dirname, "node_modules/jquery/dist/jquery.js"),
-			"d3": path.join(__dirname, "node_modules/d3/d3.js"),
-			"rickshaw": path.join(__dirname, "node_modules/rickshaw/rickshaw.js"),
-			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/rickshaw.css"),
+			"jquery": path.join(__dirname, "node_modules/jquery/dist/" + (isProduction ? "jquery.min.js" : "jquery.js")),
+			"d3": path.join(__dirname, "node_modules/d3/" + (isProduction ? "d3.min.js" : "d3.js")),
+			"rickshaw": path.join(__dirname, "node_modules/rickshaw/" + (isProduction ? "rickshaw.min.js" : "rickshaw.js")),
+			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/" + (isProduction ? "rickshaw.min.css" : "rickshaw.css")),
 			
 			"prefixer.less": path.join(__dirname, "src/frontend/vendor/prefixer.less"),
 			"flexbox.less": path.join(__dirname, "src/frontend/vendor/flexbox.less")
@@ -55,8 +57,7 @@ module.exports = {
 		extensions: ["", ".js"]
 	},
 	plugins: [
-		new webpack.optimize.CommonsChunkPlugin("vendor", "libs/[name].js?[chunkhash]"),
-		// TODO: Add `new webpack.optimize.UglifyJsPlugin({}),`, make it not break the code (currently it breaks).
+		new webpack.optimize.CommonsChunkPlugin("vendor", "[name].js?[chunkhash]"),
 		new HtmlWebpackPlugin({
 			template: './src/frontend/index.blueimp.html'
 		})
@@ -69,3 +70,24 @@ module.exports = {
 		port: 3000
 	}
 };
+
+if (isProduction) {
+	webpackConfig.plugins.push(
+		new webpack.DefinePlugin({
+			"process.env": {
+				NODE_ENV: JSON.stringify("production")
+			}
+		}),
+		new webpack.optimize.DedupePlugin(),
+		new webpack.optimize.UglifyJsPlugin({
+			sourceMap: false,
+			mangle: {
+				except: [
+					"$super" //< "rickshaw" module uses "$super" for inheritance.
+				]
+			}
+		})
+	);
+}
+
+module.exports = webpackConfig;

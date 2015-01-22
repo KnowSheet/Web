@@ -6,7 +6,7 @@ var inherits = require('inherits');
 
 var ParserBuffer = require('./parser-buffer');
 
-var console = global.console;
+var logger = require('./logger');
 
 
 // Parser states:
@@ -23,7 +23,7 @@ var R_ERROR = 3;
  * Performs parsing of JSON that comes in chunks.
  * Emits a 'data' event when a JSON object is parsed out.
  *
- * @param {string} [options.logPrefix=''] The prefix to add to the console messages.
+ * @param {string} [options.logPrefix=''] The prefix to add to the log messages.
  * @param {string} [options.separator=''] The separator between the JSON objects. If non-empty, the parser fails on missing separator.
  */
 function JsonPerLineParser(options) {
@@ -66,17 +66,17 @@ _.extend(JsonPerLineParser.prototype, {
 	},
 	
 	_onData: function (jsonObject) {
-		console.log(this._options.logPrefix + 'Data:', jsonObject);
+		logger.log(this._options.logPrefix + 'Data:', jsonObject);
 		this.emit('data', jsonObject);
 	},
 	
 	_onEnd: function () {
-		console.warn(this._options.logPrefix + 'End.');
+		logger.warn(this._options.logPrefix + 'End.');
 		this.emit('end');
 	},
 	
 	_onError: function (error) {
-		console.error(this._options.logPrefix + 'Error:', error);
+		logger.error(this._options.logPrefix + 'Error:', error);
 		this.emit('error', error);
 	},
 	

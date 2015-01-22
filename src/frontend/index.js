@@ -15,15 +15,13 @@ var config = require('./config');
 
 require('./index.less');
 
-var console = global.console;
-var setTimeout = global.setTimeout;
-var clearTimeout = global.clearTimeout;
-var XMLHttpRequest = global.XMLHttpRequest;
+
+var logger = require('./logger');
 
 var logPrefix = '[frontend] ';
 
 
-console.log(logPrefix + 'Loaded at ' + (new Date()));
+logger.log(logPrefix + 'Loaded at ' + (new Date()));
 
 
 function init() {
@@ -45,7 +43,7 @@ function init() {
 				var layout = response.value0;
 			
 				if (layout) {
-					console.log(logPrefix + 'Loaded layout from ' + layoutUrl + ':', layout);
+					logger.log(logPrefix + 'Loaded layout from ' + layoutUrl + ':', layout);
 				
 					dispatcher.emit('receive-layout', {
 						layoutUrl: layoutUrl,
@@ -53,7 +51,7 @@ function init() {
 					});
 				}
 			}, function (jqXHR) {
-				console.error(logPrefix + 'Failed to load layout from ' + layoutUrl + ':', jqXHR);
+				logger.error(logPrefix + 'Failed to load layout from ' + layoutUrl + ':', jqXHR);
 				
 				global.alert('An error occurred while loading meta from ' + layoutUrl + '.');
 			});
@@ -67,7 +65,7 @@ function init() {
 				var meta = response.value0;
 				
 				if (meta) {
-					console.log(logPrefix + 'Loaded meta from ' + metaUrl + ':', meta);
+					logger.log(logPrefix + 'Loaded meta from ' + metaUrl + ':', meta);
 					
 					dispatcher.emit('receive-meta', {
 						metaUrl: metaUrl,
@@ -75,7 +73,7 @@ function init() {
 					});
 				}
 			}, function (jqXHR) {
-				console.error(logPrefix + 'Failed to load meta from ' + metaUrl + ':', jqXHR);
+				logger.error(logPrefix + 'Failed to load meta from ' + metaUrl + ':', jqXHR);
 				
 				global.alert('An error occurred while loading meta from ' + metaUrl + '.');
 			});
@@ -175,7 +173,7 @@ function init() {
 	
 	backendApi.loadLayout( '/layout' );
 	
-	console.log(logPrefix + 'Initialized at ' + (new Date()));
+	logger.log(logPrefix + 'Initialized at ' + (new Date()));
 }
 
 $(global).on('load', init);

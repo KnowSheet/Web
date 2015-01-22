@@ -7,8 +7,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "echo \"Starting for development...\\n\" && NODE_ENV=development node ./index.js",
-    "start": "echo \"Building with webpack...\\n\" && node ./node_modules/webpack/bin/webpack.js && echo \"Starting backend stub...\\n\" && node ./src/backend_stub/index.js",
-    "build": "echo \"Building with webpack...\\n\" && node ./node_modules/webpack/bin/webpack.js && echo \"\\nDone ($?).\";",
+    "start-dev": "echo \"Building with webpack...\\n\" && NODE_ENV=development node ./node_modules/webpack/bin/webpack.js && echo \"Starting backend stub...\\n\" && NODE_ENV=development node ./src/backend_stub/index.js",
+    "start": "echo \"Building with webpack...\\n\" && NODE_ENV=production node ./node_modules/webpack/bin/webpack.js && echo \"Starting backend stub...\\n\" && NODE_ENV=production node ./src/backend_stub/index.js",
+    "build": "echo \"Building with webpack...\\n\" && NODE_ENV=production node ./node_modules/webpack/bin/webpack.js && echo \"\\nDone ($?).\";",
     "clean": "echo \"Cleaning...\\n\" && rm -r -v ./build && echo \"\\nDone ($?).\";",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -30,6 +31,7 @@
     "json-loader": "^0.5.1",
     "less": "^1.7.5",
     "less-loader": "^0.7.7",
+    "loglevel": "sompylasar/loglevel#1.3.0",
     "moment": "^2.8.4",
     "moment-timezone": "^0.2.5",
     "node-event-emitter": "0.0.1",

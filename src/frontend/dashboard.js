@@ -9,8 +9,6 @@ var DashboardLayout = require('./dashboard-layout');
 
 require('./dashboard.less');
 
-var console = global.console;
-
 
 function Dashboard(locator, options) {
 	EventEmitter.call(this);
