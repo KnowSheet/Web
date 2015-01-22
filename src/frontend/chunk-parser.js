@@ -6,7 +6,7 @@ var inherits = require('inherits');
 
 var ParserBuffer = require('./parser-buffer');
 
-var console = global.console;
+var logger = require('./logger');
 
 
 var CRLF = "\r\n";
@@ -29,7 +29,7 @@ var R_END = 4;
  * Emits a 'data' event when a chunk body is parsed out.
  * Does not perform parsing of the chunk data itself.
  *
- * @param {string} [options.logPrefix=''] The prefix to add to the console messages.
+ * @param {string} [options.logPrefix=''] The prefix to add to the log messages.
  */
 function ChunkParser(options) {
 	EventEmitter.call(this);
@@ -75,17 +75,17 @@ _.extend(ChunkParser.prototype, {
 	},
 	
 	_onData: function (data) {
-		console.log(this._options.logPrefix + 'Data:', data);
+		logger.log(this._options.logPrefix + 'Data:', data);
 		this.emit('data', data);
 	},
 	
 	_onEnd: function () {
-		console.warn(this._options.logPrefix + 'End.');
+		logger.warn(this._options.logPrefix + 'End.');
 		this.emit('end');
 	},
 	
 	_onError: function (error) {
-		console.error(this._options.logPrefix + 'Error:', error);
+		logger.error(this._options.logPrefix + 'Error:', error);
 		this.emit('error', error);
 	},
 	

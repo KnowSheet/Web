@@ -5,8 +5,6 @@ var _ = require('underscore');
 
 require('./dashboard-layout.less');
 
-var console = global.console;
-
 
 function DashboardLayout(locator, options) {
 	var _this = this;
