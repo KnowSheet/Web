@@ -151,7 +151,7 @@ _.extend(PersistentConnection.prototype, {
 	},
 	
 	_onData: function (data) {
-		logger.log(this._options.logPrefix + 'Data:', data);
+		//logger.log(this._options.logPrefix + 'Data:', data);
 		this.emit('data', data);
 	},
 	

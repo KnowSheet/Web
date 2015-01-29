@@ -23,7 +23,7 @@ module.exports = {
 		var sockets = {}, nextSocketId = 0;
 		var appServerRestarting = false;
 		app.get('/_restart', cors(), function (req, res) {
-			res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+			res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 			
 			if (appServerRestarting) {
 				res.write('Sir, I\'m already restarting...\n');
@@ -82,15 +82,9 @@ module.exports = {
 			
 			var stream;
 			
+			
 			logger.info(streamLogPrefix + 'Client connected.');
 			
-			res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-			res.setHeader('Transfer-Encoding', 'chunked');
-			
-			// Write some data to flush the headers:
-			writeJson({});
-			
-			logger.info(streamLogPrefix + 'Headers sent.');
 			
 			req.on('close', function () {
 				logger.info(streamLogPrefix + 'Client disconnected unexpectedly.');
@@ -108,15 +102,31 @@ module.exports = {
 				}
 			});
 			
-			stream = logic.streamData(req.query, function (chunk) {
-				logger.info(streamLogPrefix + 'Sending ' +
-					chunk.value0.data.length +
-					' samples.');
+			
+			// Write the headers without buffering.
+			// @see http://michaelheap.com/force-flush-headers-using-the-http-module-for-nodejs/
+			// This will build the HTTP response to send back headers:
+			res.writeHead(200, {
+				'Connection': 'keep-alive',
+				'Content-Type': 'application/json; charset=utf-8',
+				'Transfer-Encoding': 'chunked'
+			});
+			// Write the headers to the socket:
+			res.socket.write(res._header);
+			// Mark the headers as sent:
+			res._headerSent = true;
+			
+			logger.info(streamLogPrefix + 'Headers sent.');
+			
+			
+			stream = logic.streamData(req.query, function (data) {
+				logger.info(streamLogPrefix + 'Sending a sample.');
 				
-				writeJson(chunk);
+				writeJson(data);
 			}, {
 				logPrefix: streamLogPrefix
 			});
+			
 			
 			function escapeStringForLogging(data) {
 				// HACK: Quick & dirty way to escape special chars:
@@ -133,8 +143,10 @@ module.exports = {
 				
 				// Conforms to the `Transfer-Encoding: chunked` specs:
 				// chunk length in hex, CRLF, chunk body, CRLF.
-				res.write(
-					chunkString.length.toString(16) + "\r\n" +
+				// WARNiNG: Use the underlying `socket.write` to write the exact CRLF.
+				// `res.write` replaces all newline-related characters with LFs.
+				res.socket.write(
+					chunkString.length.toString(16).toUpperCase() + "\r\n" +
 					chunkString + "\r\n"
 				);
 			}

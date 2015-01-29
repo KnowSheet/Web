@@ -292,7 +292,7 @@ module.exports = function (config) {
 			};
 			
 			return {
-				value0: layout
+				layout: layout
 			};
 		},
 		
@@ -300,7 +300,7 @@ module.exports = function (config) {
 			var metaId = params.meta_id;
 			
 			return {
-				value0: meta[metaId]
+				meta: meta[metaId]
 			};
 		},
 		
@@ -315,11 +315,10 @@ module.exports = function (config) {
 			var reader = new Reader(_store, seriesId, since, function (data) {
 				logger.info(streamLogPrefix + 'Reading ' + data.length + ' samples.');
 				
-				writeFn({
-					value0: {
-						data: data
-					}
-				});
+				// Send one top-level JSON object per data sample:
+				for (var ic = data.length, i = 0; i < ic; ++i) {
+					writeFn(data[i]);
+				}
 			});
 			
 			reader.start();
