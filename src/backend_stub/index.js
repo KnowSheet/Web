@@ -103,15 +103,15 @@ module.exports = {
 			});
 			
 			
-			// Write the headers without buffering.
-			// @see http://michaelheap.com/force-flush-headers-using-the-http-module-for-nodejs/
 			// This will build the HTTP response to send back headers:
 			res.writeHead(200, {
 				'Connection': 'keep-alive',
 				'Content-Type': 'application/json; charset=utf-8',
 				'Transfer-Encoding': 'chunked'
 			});
-			// Write the headers to the socket:
+			// HACK: Write the headers without buffering.
+			// @see http://michaelheap.com/force-flush-headers-using-the-http-module-for-nodejs/
+			// Write the headers directly to the socket:
 			res.socket.write(res._header);
 			// Mark the headers as sent:
 			res._headerSent = true;
@@ -141,14 +141,11 @@ module.exports = {
 				logger.info(streamLogPrefix + 'Writing chunk: ' +
 					escapeStringForLogging(chunkString));
 				
-				// Conforms to the `Transfer-Encoding: chunked` specs:
-				// chunk length in hex, CRLF, chunk body, CRLF.
-				// WARNiNG: Use the underlying `socket.write` to write the exact CRLF.
-				// `res.write` replaces all newline-related characters with LFs.
-				res.socket.write(
-					chunkString.length.toString(16).toUpperCase() + "\r\n" +
-					chunkString + "\r\n"
-				);
+				// If `Transfer-Encoding: chunked` header is set, 
+				// the `http` module sends the `write`s in chunks automagically.
+				// @see https://github.com/joyent/node/blob/v0.11.16/lib/_http_outgoing.js#L315
+				// @see https://github.com/joyent/node/blob/v0.11.16/lib/_http_outgoing.js#L442
+				res.write(chunkString);
 			}
 			
 			function writeJson(payload) {
