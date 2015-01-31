@@ -4,8 +4,9 @@ var $ = require('jquery');
 var _ = require('underscore');
 var EventEmitter = require('node-event-emitter');
 
+var queryStringUtil = require('./query-string-util');
+
 var PersistentConnection = require('./persistent-connection');
-var ChunkParser = require('./chunk-parser');
 var JsonPerLineParser = require('./json-per-line-parser');
 
 var Dashboard = require('./dashboard');
@@ -120,7 +121,9 @@ function init() {
 					// Advance the time that will go in the next request
 					// to the latest data sample time (add 1 to avoid duplicates):
 					queryParams.since = data.x + 1;
-					persistentConnection.setQuery(queryParams);
+					persistentConnection.setUrl(
+						queryStringUtil.extend(persistentConnection.getUrl(), queryParams)
+					);
 					
 					// Notify that the data has been received:
 					dispatcher.emit('receive-data', {

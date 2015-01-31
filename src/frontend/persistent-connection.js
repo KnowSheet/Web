@@ -33,7 +33,7 @@ function PersistentConnection(options) {
 		reconnectDelayCoeff: 1.1
 	}, options);
 	
-	_this._queryParams = {};
+	_this._url = null;
 	
 	_this.disconnect();
 }
@@ -58,17 +58,14 @@ _.extend(PersistentConnection.prototype, {
 	 * Opens a persistent connection on a given URL.
 	 * The server is expected to keep the connection open forever and push the data.
 	 *
-	 * @param {string} url The URL to request.
-	 * @param {Object.<string,string>} [queryParams={}] The query parameters to add to the URL. May be updated later via `setQuery`.
+	 * @param {string} url The URL to request. May be updated later via `setUrl`.
 	 */
-	connect: function (url, queryParams) {
+	connect: function (url) {
 		var _this = this;
 		
 		_this._dropConnection();
 		
 		_this._url = url;
-		
-		_this.setQuery(queryParams);
 		
 		_this._resetReconnectParams();
 		
@@ -76,10 +73,17 @@ _.extend(PersistentConnection.prototype, {
 	},
 	
 	/**
-	 * Updates the query parameters for future reconnects.
+	 * Returns the URL.
 	 */
-	setQuery: function (queryParams) {
-		this._queryParams = _.extend({}, queryParams);
+	getUrl: function () {
+		return this._url;
+	},
+	
+	/**
+	 * Updates the URL for future reconnects.
+	 */
+	setUrl: function (url) {
+		this._url = url;
 	},
 	
 	/**
@@ -88,6 +92,10 @@ _.extend(PersistentConnection.prototype, {
 	 */
 	reconnect: function () {
 		var _this = this;
+		
+		if (!_this._url) {
+			throw new Error('PersistentConnection#reconnect: Missing URL.');
+		}
 		
 		_this._dropConnection();
 		
@@ -212,11 +220,7 @@ _.extend(PersistentConnection.prototype, {
 			}
 		};
 		
-		var requestUrl = _this._url;
-		requestUrl += (requestUrl.indexOf('?') < 0 ? '?' : '&');
-		requestUrl += $.param(_this._queryParams);
-		
-		xhr.open('GET', requestUrl, true);
+		xhr.open('GET', _this._url, true);
 		
 		xhr.send(null);
 	},

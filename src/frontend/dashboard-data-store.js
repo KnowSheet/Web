@@ -67,9 +67,11 @@ _.extend(DashboardDataStore.prototype, {
 	
 	_handleMeta: function (args) {
 		var _this = this,
-			dataUrl = args.meta.data_url,
 			meta = args.meta,
+			dataUrl = meta.data_url,
 			timeInterval = (meta.visualizer_options && meta.visualizer_options.time_interval);
+		
+		// WARNING: The frontend assumes unique data URLs.
 		
 		// Update the meta cache:
 		_this._meta[dataUrl] = meta;
@@ -86,6 +88,8 @@ _.extend(DashboardDataStore.prototype, {
 			data = args.data,
 			meta = _this._meta[dataUrl],
 			timeInterval = (meta.visualizer_options && meta.visualizer_options.time_interval);
+		
+		// WARNING: The frontend assumes unique data URLs.
 		
 		// Create the data array if required:
 		var seriesData = _this._data[dataUrl] = _this._data[dataUrl] || [];

@@ -18,7 +18,7 @@ Store.prototype.getDataSince = function (seriesId, since) {
 	var _this = this,
 		updatesData = [],
 		storeData = _this.getData(seriesId),
-		ic = storeData.length,
+		ic = (storeData ? storeData.length : 0),
 		i = ic-1;
 	
 	while (i >= 0) {
@@ -32,22 +32,22 @@ Store.prototype.getDataSince = function (seriesId, since) {
 	return updatesData;
 };
 Store.prototype.addSeries = function (seriesId, options) {
-	var seriesData = this._data[seriesId] = this._data[seriesId] || [];
+	this._data[seriesId] = this._data[seriesId] || [];
 	this._options[seriesId] = _.extend({}, options);
 };
 Store.prototype.addData = function (seriesId, updateData) {
 	var seriesData = this._data[seriesId];
 	
-	if (updateData && updateData.length) {
+	if (seriesData && updateData && updateData.length) {
 		seriesData.push.apply(seriesData, updateData);
 	}
 };
 Store.prototype.collectData = function (seriesId) {
 	var seriesData = this._data[seriesId];
+	var options = this._options[seriesId];
 	
-	var collectFn = this._options[seriesId].collectFn;
-	
-	if (seriesData && collectFn) {
+	if (seriesData && options && options.collectFn) {
+		var collectFn = options.collectFn;
 		collectFn(function (value) {
 			var now = Date.now();
 			
@@ -177,8 +177,9 @@ module.exports = function (config) {
 		return config.httpBaseUrl + '/meta?meta_id=' + metaId;
 	}
 	
-	function makeDataUrl(seriesId) {
-		return config.httpBaseUrl + '/data?series_id=' + seriesId;
+	function makeDataUrl(metaId, seriesId) {
+		// WARNING: The frontend assumes unique data URLs, so we include metaId.
+		return config.httpBaseUrl + '/data?meta_id=' + metaId + '&series_id=' + seriesId;
 	}
 	
 	function makeLayoutCell(metaId) {
@@ -191,7 +192,7 @@ module.exports = function (config) {
 	
 	var meta = {
 		"1": {
-			data_url: makeDataUrl('cpu'),
+			data_url: makeDataUrl('1', 'cpu'),
 			visualizer_name: 'plot-visualizer',
 			visualizer_options: {
 				header_text: 'CPU Load',
@@ -202,7 +203,7 @@ module.exports = function (config) {
 			}
 		},
 		"2": {
-			data_url: makeDataUrl('memory'),
+			data_url: makeDataUrl('2', 'memory'),
 			visualizer_name: 'plot-visualizer',
 			visualizer_options: {
 				header_text: 'Memory Footprint',
@@ -212,7 +213,7 @@ module.exports = function (config) {
 			}
 		},
 		"3": {
-			data_url: makeDataUrl('cpu'),
+			data_url: makeDataUrl('3', 'cpu'),
 			visualizer_name: 'plot-visualizer',
 			visualizer_options: {
 				header_text: 'CPU Load copy',
@@ -223,7 +224,7 @@ module.exports = function (config) {
 			}
 		},
 		"4": {
-			data_url: makeDataUrl('cpu'),
+			data_url: makeDataUrl('4', 'cpu'),
 			visualizer_name: 'value-visualizer',
 			visualizer_options: {
 				header_text: 'CPU Load Value',
@@ -237,7 +238,7 @@ module.exports = function (config) {
 	(function () {
 		for (var ic = TEST_DATA_SERIES_COUNT, i = 0; i < ic; ++i) {
 			meta['data' + i] = {
-				data_url: makeDataUrl('data' + i),
+				data_url: makeDataUrl('data' + i, 'data' + i),
 				visualizer_name: 'plot-visualizer',
 				visualizer_options: {
 					header_text: 'Data ' + i,
