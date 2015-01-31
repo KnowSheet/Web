@@ -122,7 +122,10 @@ function init() {
 					// to the latest data sample time (add 1 to avoid duplicates):
 					queryParams.since = data.x + 1;
 					persistentConnection.setUrl(
-						queryStringUtil.extend(persistentConnection.getUrl(), queryParams)
+						queryStringUtil.extend(
+							persistentConnection.getUrl(),
+							queryParams
+						)
 					);
 					
 					// Notify that the data has been received:
