@@ -4,8 +4,9 @@ var $ = require('jquery');
 var _ = require('underscore');
 var EventEmitter = require('node-event-emitter');
 
+var queryStringUtil = require('./query-string-util');
+
 var PersistentConnection = require('./persistent-connection');
-var ChunkParser = require('./chunk-parser');
 var JsonPerLineParser = require('./json-per-line-parser');
 
 var Dashboard = require('./dashboard');
@@ -40,7 +41,7 @@ function init() {
 				url: this.normalizeUrl(layoutUrl),
 				dataType: 'json'
 			}).then(function (response) {
-				var layout = response.value0;
+				var layout = response.layout;
 			
 				if (layout) {
 					logger.log(logPrefix + 'Loaded layout from ' + layoutUrl + ':', layout);
@@ -62,7 +63,7 @@ function init() {
 				url: this.normalizeUrl(metaUrl),
 				dataType: 'json'
 			}).then(function (response) {
-				var meta = response.value0;
+				var meta = response.meta;
 				
 				if (meta) {
 					logger.log(logPrefix + 'Loaded meta from ' + metaUrl + ':', meta);
@@ -96,10 +97,6 @@ function init() {
 				logPrefix: 	logPrefix + ' [' + dataUrl + '] [PersistentConnection] '
 			});
 			
-			var chunkParser = new ChunkParser({
-				logPrefix: 	logPrefix + ' [' + dataUrl + '] [ChunkParser] '
-			});
-			
 			var jsonPerLineParser = new JsonPerLineParser({
 				logPrefix: 	logPrefix + ' [' + dataUrl + '] [JsonPerLineParser] '
 			});
@@ -111,34 +108,30 @@ function init() {
 			}
 			
 			persistentConnection.on('connected', function (data) {
-				chunkParser.reset();
 				jsonPerLineParser.reset();
 			});
 			persistentConnection.on('data', function (data) {
-				chunkParser.write(data);
+				jsonPerLineParser.write(data);
 			});
 			persistentConnection.on('end', reconnectOnError);
 			persistentConnection.on('error', reconnectOnError);
 			
-			chunkParser.on('data', function (data) {
-				jsonPerLineParser.write(data);
-			});
-			chunkParser.on('end', reconnectOnError);
-			chunkParser.on('error', reconnectOnError);
-			
 			jsonPerLineParser.on('data', function (data) {
-				data = (data && data.value0 && data.value0.data);
-				
-				if (data && data.length > 0) {
+				if (data && typeof data.x === 'number' && typeof data.y === 'number') {
 					// Advance the time that will go in the next request
 					// to the latest data sample time (add 1 to avoid duplicates):
-					queryParams.since = data[data.length-1].x + 1;
-					persistentConnection.setQuery(queryParams);
+					queryParams.since = data.x + 1;
+					persistentConnection.setUrl(
+						queryStringUtil.extend(
+							persistentConnection.getUrl(),
+							queryParams
+						)
+					);
 					
 					// Notify that the data has been received:
 					dispatcher.emit('receive-data', {
 						dataUrl: dataUrl,
-						data: data
+						data: [ data ]
 					});
 				}
 			});

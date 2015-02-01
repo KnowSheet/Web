@@ -66,7 +66,7 @@ _.extend(JsonPerLineParser.prototype, {
 	},
 	
 	_onData: function (jsonObject) {
-		logger.log(this._options.logPrefix + 'Data:', jsonObject);
+		//logger.log(this._options.logPrefix + 'Data:', jsonObject);
 		this.emit('data', jsonObject);
 	},
 	
