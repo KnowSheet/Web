@@ -18,6 +18,13 @@ module.exports = {
 		var app = express(http.createServer());
 		var appServer;
 		
+		app.use(config.staticBaseUrl, serveStatic(config.staticPath));
+		app.get('/', function (req, res) {
+			res.sendFile('index.html', {
+				root: config.staticPath
+			});
+		});
+		
 		/* DEBUG: For testing connection outage. */
 		// Maintain a hash of all connected sockets:
 		var sockets = {}, nextSocketId = 0;
@@ -34,7 +41,7 @@ module.exports = {
 			res.write('Sir, yes, sir!\n');
 			res.end();
 			
-			logger.info('HTTP server restart requested.');
+			logger.info('Server restart requested.');
 			process.nextTick(function () {
 				if (appServer) {
 					appServerRestarting = true;
@@ -43,11 +50,11 @@ module.exports = {
 					appServer.close(function () {
 						var restartInterval = 5000;
 						
-						logger.info('HTTP server will restart in ' +
+						logger.info('Server will restart in ' +
 							restartInterval + 'ms.');
 						
 						setTimeout(function () {
-							logger.info('HTTP server restarting...');
+							logger.info('Server restarting...');
 							appStart();
 						}, restartInterval);
 					});
@@ -63,21 +70,35 @@ module.exports = {
 		});
 		// DEBUG */
 		
-		app.get('/layout', cors(), function (req, res) {
-			res.json(logic.getLayout(req.query));
+		// Provide the config from the backend:
+		app.get('/config.json', cors(), function (req, res) {
+			var responseJson = {
+				dataHostnames: config.dataHostnames,
+				layoutUrl: '/layout'
+			};
+			logger.info('Config requested. Response: ' + JSON.stringify(responseJson));
+			res.json(responseJson);
 		});
 		
-		app.get('/meta', cors(), function (req, res) {
-			res.json(logic.getMeta(req.query));
+		app.get('/layout', cors(), function (req, res) {
+			var responseJson = logic.getLayout();
+			logger.info('Layout requested. Response: ' + JSON.stringify(responseJson));
+			res.json(responseJson);
+		});
+		
+		app.get('/layout/meta', cors(), function (req, res) {
+			var responseJson = logic.getMeta(req.query);
+			logger.info('Meta ' + JSON.stringify(req.query) + ' requested. Response: ' + JSON.stringify(responseJson));
+			res.json(responseJson);
 		});
 		
 		var nextStreamIndex = 0;
 		
-		app.get('/data', cors(), function (req, res) {
+		app.get('/layout/data', cors(), function (req, res) {
 			++nextStreamIndex;
 			
 			var streamLogPrefix = '';
-			streamLogPrefix += '[' + req.query.series_id + ';' + req.query.since + '] ';
+			streamLogPrefix += JSON.stringify(req.query) + ' ';
 			streamLogPrefix += '(' + nextStreamIndex + ') ';
 			
 			var stream;
@@ -120,7 +141,7 @@ module.exports = {
 			
 			
 			stream = logic.streamData(req.query, function (data) {
-				logger.info(streamLogPrefix + 'Sending a sample.');
+				logger.info(streamLogPrefix + 'Sending a sample: ' + JSON.stringify(data));
 				
 				writeJson(data);
 			}, {
@@ -138,8 +159,8 @@ module.exports = {
 			}
 			
 			function writeChunk(chunkString) {
-				logger.info(streamLogPrefix + 'Writing chunk: ' +
-					escapeStringForLogging(chunkString));
+				//logger.info(streamLogPrefix + 'Writing chunk: ' +
+				//	escapeStringForLogging(chunkString));
 				
 				// If `Transfer-Encoding: chunked` header is set, 
 				// the `http` module sends the `write`s in chunks automagically.
@@ -152,8 +173,8 @@ module.exports = {
 				// Serialize the payload, add the payload separator.
 				var payloadString = JSON.stringify(payload) + "\n";
 				
-				logger.info(streamLogPrefix + 'Splitting payload: ' +
-					escapeStringForLogging(payloadString));
+				//logger.info(streamLogPrefix + 'Splitting payload: ' +
+				//	escapeStringForLogging(payloadString));
 				
 				// Split into chunks of random length.
 				var splitStart = 0;
@@ -177,12 +198,10 @@ module.exports = {
 			
 			appServer.on('listening', function () {
 				appServerRestarting = false;
-				logger.info('HTTP server listening at ' +
-					'http://localhost:' + config.httpPort
-				);
+				logger.info('Server listening at port ' + config.httpPort);
 			});
 			appServer.on('close', function () {
-				logger.info('HTTP server stopped.');
+				logger.info('Server stopped.');
 			});
 			
 			/* DEBUG: For testing connection outage. */
@@ -199,16 +218,6 @@ module.exports = {
 		}
 		
 		appStart();
-		
-		var staticServer = express(http.createServer())
-			.use(serveStatic(config.staticPath))
-			.listen(config.staticPort);
-		
-		staticServer.on('listening', function () {
-			logger.info('Static files server listening at ' +
-				'http://localhost:' + config.staticPort
-			);
-		});
 	}
 };
 

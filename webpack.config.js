@@ -12,7 +12,7 @@ var webpackConfig = {
 	context: __dirname,
 	output: {
 		path: path.join(__dirname, (isProduction ? "build" : "build-dev")),
-		publicPath: "/",
+		publicPath: "/static/",
 		filename: "[name].js?[chunkhash]"
 	},
 	entry: {
