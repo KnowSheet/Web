@@ -88,7 +88,7 @@ _.extend(DashboardLayout.prototype, {
 				else {
 					$layout.addClass('knsh-dashboard-layout-group__m-col');
 				}
-		
+				
 				var $items = layout.$items = $('<div class="knsh-dashboard-layout-group__items"></div>');
 				
 				$layout.appendTo(layout.$root);
@@ -119,7 +119,7 @@ _.extend(DashboardLayout.prototype, {
 				if (cell && cell.meta_url === metaUrl) {
 					var meta = _this._layoutStore.getMeta(metaUrl);
 					
-					if (!cell.visualizer) {
+					if (!cell.visualizer && meta.visualizer_name) {
 						var Visualizer = require('./visualizers/' + meta.visualizer_name);
 						
 						// WARNING: The visualizers must take dimensions from the layout
