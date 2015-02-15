@@ -131,6 +131,8 @@ _.extend(PlotVisualizer.prototype, {
 	_renderPlot: function () {
 		var _this = this;
 		
+		_this._renderTimeTicks();
+		
 		_this._graph.render();
 		_this._xAxis.render();
 		_this._yAxis.render();
