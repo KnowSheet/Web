@@ -21,7 +21,7 @@ function ValueVisualizer(locator, options, dataUrl) {
 		min: 0.0,
 		max: 1.0,
 		fraction_digits: 4,
-		low_is_bad: false
+		higher_is_better: false
 	}, options);
 	
 	var blockCssClass = 'knsh-value-visualizer';
@@ -93,7 +93,7 @@ _.extend(ValueVisualizer.prototype, {
 		value = ((value - _this._options.min) / (_this._options.max - _this._options.min));
 		
 		// Default is to display low values as good ones (green), invert if opposite:
-		if (_this._options.low_is_bad) {
+		if (_this._options.higher_is_better) {
 			value = (1.0 - value);
 		}
 		
