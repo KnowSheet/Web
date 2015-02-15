@@ -1,8 +1,10 @@
+/*global window*/
 'use strict';
 
 var $ = require('jquery');
 var _ = require('underscore');
 var EventEmitter = require('node-event-emitter');
+var URL = require('url');
 
 var queryStringUtil = require('./query-string-util');
 
@@ -12,7 +14,6 @@ var JsonPerLineParser = require('./json-per-line-parser');
 var Dashboard = require('./dashboard');
 var DashboardDataStore = require('./dashboard-data-store');
 var DashboardLayoutStore = require('./dashboard-layout-store');
-var config = require('./config');
 
 require('./index.less');
 
@@ -28,24 +29,52 @@ logger.log(logPrefix + 'Loaded at ' + (new Date()));
 function init() {
 	var dispatcher = new EventEmitter();
 	
+	var config = null;
+	var dataHostnamesRoundRobin = 0;
+	
 	var backendApi = {
-		baseUrl: config.backend.httpBaseUrl,
-		normalizeUrl: function (url) {
-			if (!/^(https?:)?\/\//.test(url)) {
-				url = this.baseUrl + url;
-			}
-			return url;
-		},
-		loadLayout: function (layoutUrl) {
+		/**
+		 * Loads the config from the backend, then loads the layout.
+		 * The config includes "layoutUrl" which is the base for other URLs.
+		 * The config includes "dataHostnames" which is an array of hostnames 
+		 * that resolve to the backend to fool the browser's domain connection limit.
+		 */
+		loadConfig: function () {
+			// Load the config from the backend:
+			var configUrl = '/config.json';
+			
 			$.ajax({
-				url: this.normalizeUrl(layoutUrl),
+				url: configUrl,
+				dataType: 'json'
+			}).then(function (response) {
+				config = _.extend({
+					layoutUrl: '/layout',
+					dataHostnames: []
+				}, response);
+				
+				backendApi.loadLayout();
+			}, function (jqXHR) {
+				logger.error(logPrefix + 'Failed to load config from ' + configUrl + ':', jqXHR);
+				
+				global.alert('An error occurred while loading config from ' + configUrl + '.');
+			});
+		},
+		
+		/**
+		 * Loads the layout via the URL from the config.
+		 */
+		loadLayout: function () {
+			var layoutUrl = config.layoutUrl;
+			
+			$.ajax({
+				url: layoutUrl,
 				dataType: 'json'
 			}).then(function (response) {
 				var layout = response.layout;
-			
+				
 				if (layout) {
 					logger.log(logPrefix + 'Loaded layout from ' + layoutUrl + ':', layout);
-				
+					
 					dispatcher.emit('receive-layout', {
 						layoutUrl: layoutUrl,
 						layout: layout
@@ -54,19 +83,24 @@ function init() {
 			}, function (jqXHR) {
 				logger.error(logPrefix + 'Failed to load layout from ' + layoutUrl + ':', jqXHR);
 				
-				global.alert('An error occurred while loading meta from ' + layoutUrl + '.');
+				global.alert('An error occurred while loading layout from ' + layoutUrl + '.');
 			});
 		},
 		
+		/**
+		 * Loads the metadata for a single layout cell.
+		 */
 		loadMeta: function (metaUrl) {
+			var metaUrlFull = config.layoutUrl + metaUrl;
+			
 			$.ajax({
-				url: this.normalizeUrl(metaUrl),
+				url: metaUrlFull,
 				dataType: 'json'
 			}).then(function (response) {
 				var meta = response.meta;
 				
 				if (meta) {
-					logger.log(logPrefix + 'Loaded meta from ' + metaUrl + ':', meta);
+					logger.log(logPrefix + 'Loaded meta from ' + metaUrlFull + ':', meta);
 					
 					dispatcher.emit('receive-meta', {
 						metaUrl: metaUrl,
@@ -74,15 +108,18 @@ function init() {
 					});
 				}
 			}, function (jqXHR) {
-				logger.error(logPrefix + 'Failed to load meta from ' + metaUrl + ':', jqXHR);
+				logger.error(logPrefix + 'Failed to load meta from ' + metaUrlFull + ':', jqXHR);
 				
-				global.alert('An error occurred while loading meta from ' + metaUrl + '.');
+				global.alert('An error occurred while loading meta from ' + metaUrlFull + '.');
 			});
 		},
 		
+		/**
+		 * Connects to the data stream with a persistent connection
+		 * and triggers updates when new data arrives.
+		 * Uses "dataHostnames" to find the hostname to connect to.
+		 */
 		streamData: function (dataUrl, timeInterval) {
-			var _this = this;
-			
 			var stopping = false;
 			
 			if (typeof timeInterval !== 'number' || timeInterval < 0) {
@@ -119,8 +156,9 @@ function init() {
 			jsonPerLineParser.on('data', function (data) {
 				if (data && typeof data.x === 'number' && typeof data.y === 'number') {
 					// Advance the time that will go in the next request
-					// to the latest data sample time (add 1 to avoid duplicates):
-					queryParams.since = data.x + 1;
+					// to the latest data sample time.
+					// HACK: Add a small number to avoid last point duplicate.
+					queryParams.since = data.x + 1e-18;
 					persistentConnection.setUrl(
 						queryStringUtil.extend(
 							persistentConnection.getUrl(),
@@ -137,7 +175,29 @@ function init() {
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
 			
-			persistentConnection.connect(_this.normalizeUrl(dataUrl), queryParams);
+			var dataUrlFull = config.layoutUrl + dataUrl;
+			
+			// Use the next hostname from the config, if available.
+			var dataUrlParsed = URL.parse(dataUrlFull);
+			var dataHostnames = config.dataHostnames;
+			if (
+				dataHostnames && dataHostnames.length > 0
+				&& (dataUrlParsed.hostname === 'localhost' || (
+					!dataUrlParsed.hostname
+					&& window.location.hostname === 'localhost'
+				))
+			) {
+				dataUrlParsed.protocol = dataUrlParsed.protocol || window.location.protocol;
+				dataUrlParsed.hostname = dataHostnames[dataHostnamesRoundRobin];
+				dataUrlParsed.port = dataUrlParsed.port || window.location.port;
+				dataHostnamesRoundRobin++;
+				if (dataHostnamesRoundRobin >= dataHostnames.length) {
+					dataHostnamesRoundRobin = 0;
+				}
+				dataUrlFull = URL.format(dataUrlParsed);
+			}
+			
+			persistentConnection.connect(dataUrlFull, queryParams);
 			
 			return {
 				stop: function () {
@@ -164,9 +224,9 @@ function init() {
 		dispatcher.emit('resize-window');
 	}, 50));
 	
-	backendApi.loadLayout( '/layout' );
-	
 	logger.log(logPrefix + 'Initialized at ' + (new Date()));
+	
+	backendApi.loadConfig();
 }
 
 $(global).on('load', init);

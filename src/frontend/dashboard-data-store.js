@@ -76,10 +76,18 @@ _.extend(DashboardDataStore.prototype, {
 		// Update the meta cache:
 		_this._meta[dataUrl] = meta;
 		
+		// Create the data array if required:
+		_this._data[dataUrl] = _this._data[dataUrl] || [];
+		
 		// Start a data stream if not yet started:
 		if (!_this._streams[dataUrl]) {
 			_this._streams[dataUrl] = _this._backendApi.streamData(dataUrl, timeInterval);
 		}
+		
+		// Notify that the new data set has appeared: 
+		_this.emit('data-updated', {
+			dataUrl: dataUrl
+		});
 	},
 	
 	_handleData: function (args) {

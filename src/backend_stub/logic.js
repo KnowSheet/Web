@@ -1,66 +1,63 @@
 'use strict';
 
 var _ = require('underscore');
+var EventEmitter = require('node-event-emitter');
+var inherits = require('inherits');
+
 var logger = require('./logger');
 
 
-function Store() {
-	this._data = {};
-	this._options = {};
-}
-Store.prototype.getSeriesIds = function () {
-	return Object.keys(this._data);
-};
-Store.prototype.getData = function (seriesId) {
-	return this._data[seriesId];
-};
-Store.prototype.getDataSince = function (seriesId, since) {
-	var _this = this,
-		updatesData = [],
-		storeData = _this.getData(seriesId),
-		ic = (storeData ? storeData.length : 0),
-		i = ic-1;
+/**
+ * Stores data points and filters them.
+ * Emits `'data'` events when new data is added to the stream.
+ */
+function DataStream() {
+	var _this = this;
 	
-	while (i >= 0) {
-		if (storeData[i].x >= since) {
-			updatesData.unshift(storeData[i]);
+	_this._data = [];
+}
+inherits(DataStream, EventEmitter);
+_.extend(DataStream.prototype, {
+	/**
+	 * @param {number} since The value of `x` to get the data since.
+	 */
+	getDataSince: function (since) {
+		var _this = this,
+			filteredData = [],
+			storedData = _this._data,
+			ic = storedData.length,
+			i = ic-1;
+		
+		while (i >= 0) {
+			if (storedData[i].x >= since) {
+				filteredData.unshift(storedData[i]);
+			}
+		
+			--i;
 		}
 		
-		--i;
+		return filteredData;
+	},
+	addData: function (updateData) {
+		var _this = this,
+			storedData = _this._data;
+		
+		if (storedData && updateData && updateData.length) {
+			storedData.push.apply(storedData, updateData);
+		}
+		
+		_this.emit('data');
 	}
-	
-	return updatesData;
-};
-Store.prototype.addSeries = function (seriesId, options) {
-	this._data[seriesId] = this._data[seriesId] || [];
-	this._options[seriesId] = _.extend({}, options);
-};
-Store.prototype.addData = function (seriesId, updateData) {
-	var seriesData = this._data[seriesId];
-	
-	if (seriesData && updateData && updateData.length) {
-		seriesData.push.apply(seriesData, updateData);
-	}
-};
-Store.prototype.collectData = function (seriesId) {
-	var seriesData = this._data[seriesId];
-	var options = this._options[seriesId];
-	
-	if (seriesData && options && options.collectFn) {
-		var collectFn = options.collectFn;
-		collectFn(function (value) {
-			var now = Date.now();
-			
-			seriesData.push({
-				x: now,
-				y: value
-			});
-		});
-	}
-};
+});
 
 
-function Timer(interval, action) {
+/**
+ * A wrapper around `setTimeout` that adds `start`/`stop` and preserves the callback.
+ * 
+ * @param {number} interval An interval to wait between for the next call.
+ * @param {function(next:function)} A callback that is called periodically. Takes `next` for asynchrony.
+ */
+function Timer(interval, actionFn) {
 	var _this = this;
 	
 	_this._started = false;
@@ -75,97 +72,137 @@ function Timer(interval, action) {
 	
 	_this._continue = function () {
 		if (_this._started) {
-			action(function () {
+			actionFn(function () {
 				_this._wait();
 			});
 		}
 	};
 }
-Timer.prototype.start = function () {
-	var _this = this;
-	
-	_this._started = true;
-	_this._continue();
-};
-Timer.prototype.stop = function () {
-	var _this = this;
-	
-	_this._started = false;
-	clearTimeout(_this._timer);
-};
+_.extend(Timer.prototype, {
+	start: function () {
+		var _this = this;
+		
+		_this._started = true;
+		_this._continue();
+	},
+	stop: function () {
+		var _this = this;
+		
+		_this._started = false;
+		clearTimeout(_this._timer);
+	}
+});
 
 
-function Writer(store) {
+/**
+ * Periodically writes to the given data stream.
+ *
+ * @param {DataStream} dataStream A data stream to write to.
+ * @param {number} interval An interval to repeat writes.
+ * @param {function(callbackFn:function(x:number,y:number))} collectFn A callback to collect the data to write.
+ */
+function Writer(dataStream, interval, collectFn) {
 	var _this = this;
 	
 	_this._since = Date.now();
 	
-	_this._timer = new Timer(1000, function (next) {
-		store.getSeriesIds().forEach(function (seriesId) {
-			store.collectData(seriesId);
-			
-			//logger.info('Collected ' + seriesId + ', samples: ' + store.getData(seriesId).length);
+	_this._timer = new Timer(interval, function (next) {
+		var updateData = [];
+		
+		collectFn(function (x, y) {
+			updateData.push({
+				x: x,
+				y: y
+			});
 		});
+		
+		dataStream.addData(updateData);
 		
 		next();
 	});
 }
-Writer.prototype.start = function () { this._timer.start(); };
-Writer.prototype.stop = function () { this._timer.stop(); };
+_.extend(Writer.prototype, {
+	start: function () { this._timer.start(); },
+	stop: function () { this._timer.stop(); }
+});
 
 
-function Reader(store, seriesId, since, callbackFn) {
+/**
+ * Sequentially reads from the given data stream.
+ *
+ * @param {DataStream} dataStream A data stream to read from
+ */
+function Reader(dataStream) {
 	var _this = this;
 	
-	_this._since = since;
-	
-	_this._timer = new Timer(1000, function (next) {
-		var dataSince = store.getDataSince(seriesId, _this._since);
-		
-		_this._since = Date.now();
-		
-		callbackFn(dataSince);
-		
-		next();
-	});
+	_this._dataStream = dataStream;
 }
-Reader.prototype.start = function () { this._timer.start(); };
-Reader.prototype.stop = function () { this._timer.stop(); };
-
-
-var _store = new Store();
-
-_store.addSeries('cpu', {
-	collectFn: function (callbackFn) {
-		var now = Date.now();
-		callbackFn(Math.abs(Math.sin(now)) * Math.random());
+inherits(Reader, EventEmitter);
+_.extend(Reader.prototype, {
+	/**
+	 * @param {number} since The value of `x` to get the data since.
+	 */
+	start: function (since) {
+		var _this = this;
+		
+		if (_this._dataHandler) {
+			_this.stop();
+		}
+		
+		_this._since = since;
+		
+		_this._dataHandler = function () {
+			var dataSince = _this._dataStream.getDataSince(_this._since);
+			
+			if (dataSince.length > 0) {
+				// HACK: Add a small number to avoid last point duplicate.
+				_this._since = dataSince[dataSince.length - 1].x + 1e-18;
+				
+				_this.emit('data', dataSince);
+			}
+		};
+		
+		_this._dataHandler();
+		
+		_this._dataStream.on('data', _this._dataHandler);
+	},
+	stop: function () {
+		var _this = this;
+		
+		if (!_this._dataHandler) { return; }
+		
+		_this._dataStream.removeListener('data', _this._dataHandler);
+		_this._dataHandler = null;
 	}
 });
 
-_store.addSeries('memory', {
-	collectFn: function (callbackFn) {
-		var now = Date.now();
-		callbackFn(Math.abs(Math.cos(now)) * Math.random());
-	}
-});
 
-var TEST_DATA_SERIES_COUNT = 10;
+var _dataStreams = {};
+
+_dataStreams['cpu'] = new DataStream();
+new Writer(_dataStreams['cpu'], 1000, function (callbackFn) {
+	var now = Date.now();
+	callbackFn(now, Math.abs(Math.sin(now)) * Math.random());
+}).start();
+
+_dataStreams['memory'] = new DataStream();
+new Writer(_dataStreams['memory'], 1000, function (callbackFn) {
+	var now = Date.now();
+	callbackFn(now, Math.abs(Math.cos(now)) * Math.random());
+}).start();
+
+
+var TEST_DATA_STREAMS_COUNT = 10;
 
 (function () {
-	for (var ic = TEST_DATA_SERIES_COUNT, i = 0; i < ic; ++i) {
-		_store.addSeries('data' + i, {
-			collectFn: function (callbackFn) {
-				var now = Date.now();
-				callbackFn(Math.abs(0.6 * Math.cos(now) + 0.4 * Math.random()));
-			}
-		});
+	for (var ic = TEST_DATA_STREAMS_COUNT, i = 0; i < ic; ++i) {
+		_dataStreams['data' + i] = new DataStream();
+		new Writer(_dataStreams['data' + i], (i + 1) * 1000, function (callbackFn) {
+			var now = Date.now();
+			callbackFn(now, Math.abs(0.6 * Math.cos(now) + 0.4 * Math.random()));
+		}).start();
 	}
 }());
-
-
-var _writer = new Writer(_store);
-
-_writer.start();
 
 
 /**
@@ -174,12 +211,14 @@ _writer.start();
 module.exports = function (config) {
 	
 	function makeMetaUrl(metaId) {
-		return config.httpBaseUrl + '/meta?meta_id=' + metaId;
+		// Relative to the layout URL.
+		return '/meta?meta_id=' + metaId;
 	}
 	
 	function makeDataUrl(metaId, seriesId) {
+		// Relative to the layout URL.
 		// WARNING: The frontend assumes unique data URLs, so we include metaId.
-		return config.httpBaseUrl + '/data?meta_id=' + metaId + '&series_id=' + seriesId;
+		return '/data?meta_id=' + metaId + '&series_id=' + seriesId;
 	}
 	
 	function makeLayoutCell(metaId) {
@@ -236,7 +275,7 @@ module.exports = function (config) {
 	};
 	
 	(function () {
-		for (var ic = TEST_DATA_SERIES_COUNT, i = 0; i < ic; ++i) {
+		for (var ic = TEST_DATA_STREAMS_COUNT, i = 0; i < ic; ++i) {
 			meta['data' + i] = {
 				data_url: makeDataUrl('data' + i, 'data' + i),
 				visualizer_name: 'plot-visualizer',
@@ -245,7 +284,7 @@ module.exports = function (config) {
 					color: 'blue',
 					min: 0.0,
 					max: 1.0,
-					time_interval: 10 * 1000
+					time_interval: TEST_DATA_STREAMS_COUNT * 1000
 				}
 			};
 		}
@@ -307,13 +346,23 @@ module.exports = function (config) {
 		
 		streamData: function (params, writeFn, options) {
 			var seriesId = params.series_id;
-			var since = params.since || Date.now();
+			var since = params.since;
+			
+			var dataStream = _dataStreams[seriesId];
+			if (!dataStream) {
+				throw new Error('Stream ' + seriesId + ' not found.');
+			}
+			
+			// Assume all streams are time-based:
+			since = since || Date.now();
 			
 			var streamLogPrefix = (options && options.logPrefix ? options.logPrefix : '[' + seriesId + ';' + since + '] ');
 			
 			logger.info(streamLogPrefix + 'Requested stream since ' + since + '.');
 			
-			var reader = new Reader(_store, seriesId, since, function (data) {
+			var reader = new Reader(dataStream);
+			
+			reader.on('data', function (data) {
 				logger.info(streamLogPrefix + 'Reading ' + data.length + ' samples.');
 				
 				// Send one top-level JSON object per data sample:
@@ -322,7 +371,7 @@ module.exports = function (config) {
 				}
 			});
 			
-			reader.start();
+			reader.start(since);
 			
 			return {
 				stop: function () {
