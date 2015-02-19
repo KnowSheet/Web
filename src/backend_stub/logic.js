@@ -331,17 +331,13 @@ module.exports = function (config) {
 				]
 			};
 			
-			return {
-				layout: layout
-			};
+			return layout;
 		},
 		
 		getMeta: function (params) {
 			var metaId = params.meta_id;
 			
-			return {
-				meta: meta[metaId]
-			};
+			return meta[metaId];
 		},
 		
 		streamData: function (params, writeFn, options) {
