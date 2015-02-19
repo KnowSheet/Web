@@ -3,9 +3,6 @@
 var $ = require('jquery');
 var _ = require('underscore');
 
-var Rickshaw = require('rickshaw');
-var moment = require('moment');
-
 require('./value-visualizer.less');
 
 
