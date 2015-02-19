@@ -156,7 +156,7 @@ _.extend(Reader.prototype, {
 			
 			if (dataSince.length > 0) {
 				// HACK: Add a small number to avoid last point duplicate.
-				_this._since = dataSince[dataSince.length - 1].x + 1e-18;
+				_this._since = dataSince[dataSince.length - 1].x + 1e-3;
 				
 				_this.emit('data', dataSince);
 			}

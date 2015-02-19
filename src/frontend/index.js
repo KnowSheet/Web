@@ -158,7 +158,7 @@ function init() {
 					// Advance the time that will go in the next request
 					// to the latest data sample time.
 					// HACK: Add a small number to avoid last point duplicate.
-					queryParams.since = data.x + 1e-18;
+					queryParams.since = data.x + 1e-3;
 					persistentConnection.setUrl(
 						queryStringUtil.extend(
 							persistentConnection.getUrl(),
