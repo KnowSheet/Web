@@ -205,6 +205,30 @@ var TEST_DATA_STREAMS_COUNT = 10;
 }());
 
 
+_dataStreams['lorempixel'] = new DataStream();
+new Writer(_dataStreams['lorempixel'], 10000, function (callbackFn) {
+	var now = Date.now();
+	var categories = [
+		'abstract',
+		'animals',
+		'business',
+		'cats',
+		'city',
+		'food',
+		'nightlife',
+		'fashion',
+		'people',
+		'nature',
+		'sports',
+		'technics',
+		'transport'
+	];
+	var category = categories[now % categories.length];
+	var index = (now % 10);
+	callbackFn(now, 'http://lorempixel.com/400/200/' + category + '/' + index + '/');
+}).start();
+
+
 /**
  * App-level logic for receiving messages and responding to them.
  */
@@ -271,6 +295,15 @@ module.exports = function (config) {
 				max: 1.0,
 				time_interval: 1000
 			}
+		},
+		"lorempixel": {
+			data_url: makeDataUrl('lorempixel', 'lorempixel'),
+			visualizer_name: 'image-visualizer',
+			visualizer_options: {
+				header_text: 'Random Images from lorempixel.com',
+				empty_text: 'No image.',
+				time_interval: 10000
+			}
 		}
 	};
 	
@@ -299,7 +332,8 @@ module.exports = function (config) {
 						row: [
 							makeLayoutCell('1'),
 							makeLayoutCell('2'),
-							makeLayoutCell('4')
+							makeLayoutCell('4'),
+							makeLayoutCell('lorempixel')
 						]
 					},
 					makeLayoutCell('3'),

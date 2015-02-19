@@ -154,7 +154,7 @@ function init() {
 			persistentConnection.on('error', reconnectOnError);
 			
 			jsonPerLineParser.on('data', function (data) {
-				if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+				if (data && typeof data.x === 'number') {
 					// Advance the time that will go in the next request
 					// to the latest data sample time.
 					// HACK: Add a small number to avoid last point duplicate.
