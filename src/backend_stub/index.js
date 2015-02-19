@@ -72,22 +72,29 @@ module.exports = {
 		
 		// Provide the config from the backend:
 		app.get('/config.json', cors(), function (req, res) {
+			var frontendConfig = {
+				layout_url: '/layout',
+				data_hostnames: config.dataHostnames
+			};
 			var responseJson = {
-				dataHostnames: config.dataHostnames,
-				layoutUrl: '/layout'
+				config: frontendConfig
 			};
 			logger.info('Config requested. Response: ' + JSON.stringify(responseJson));
 			res.json(responseJson);
 		});
 		
 		app.get('/layout', cors(), function (req, res) {
-			var responseJson = logic.getLayout();
+			var responseJson = {
+				layout: logic.getLayout()
+			};
 			logger.info('Layout requested. Response: ' + JSON.stringify(responseJson));
 			res.json(responseJson);
 		});
 		
 		app.get('/layout/meta', cors(), function (req, res) {
-			var responseJson = logic.getMeta(req.query);
+			var responseJson = {
+				meta: logic.getMeta(req.query)
+			};
 			logger.info('Meta ' + JSON.stringify(req.query) + ' requested. Response: ' + JSON.stringify(responseJson));
 			res.json(responseJson);
 		});

@@ -48,9 +48,9 @@ function init() {
 				dataType: 'json'
 			}).then(function (response) {
 				config = _.extend({
-					layoutUrl: '/layout',
-					dataHostnames: []
-				}, response);
+					layout_url: '/layout',
+					data_hostnames: []
+				}, response && response.config);
 				
 				backendApi.loadLayout();
 			}, function (jqXHR) {
@@ -64,7 +64,7 @@ function init() {
 		 * Loads the layout via the URL from the config.
 		 */
 		loadLayout: function () {
-			var layoutUrl = config.layoutUrl;
+			var layoutUrl = config.layout_url;
 			
 			$.ajax({
 				url: layoutUrl,
@@ -91,7 +91,7 @@ function init() {
 		 * Loads the metadata for a single layout cell.
 		 */
 		loadMeta: function (metaUrl) {
-			var metaUrlFull = config.layoutUrl + metaUrl;
+			var metaUrlFull = config.layout_url + metaUrl;
 			
 			$.ajax({
 				url: metaUrlFull,
@@ -175,11 +175,11 @@ function init() {
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
 			
-			var dataUrlFull = config.layoutUrl + dataUrl;
+			var dataUrlFull = config.layout_url + dataUrl;
 			
 			// Use the next hostname from the config, if available.
 			var dataUrlParsed = URL.parse(dataUrlFull);
-			var dataHostnames = config.dataHostnames;
+			var dataHostnames = config.data_hostnames;
 			if (
 				dataHostnames && dataHostnames.length > 0
 				&& (dataUrlParsed.hostname === 'localhost' || (
