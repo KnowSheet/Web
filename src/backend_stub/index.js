@@ -82,12 +82,23 @@ module.exports = {
 		});
 		// DEBUG */
 		
-		// Provide the config from the backend:
+		// Provide the frontend config from the backend.
 		app.get(config.baseUrl + 'config.json', cors(), function (req, res) {
+			// Read the dashboard template from the file.
+			// TODO(sompylasar): Build templates from HTML and LESS instead of the single HTML+CSS file.
+			// TODO(sompylasar): Personalized templates (?).
+			var dashboardTemplateHtml = require('fs').readFileSync(__dirname + '/dashboard-template.html', {
+				encoding: 'utf8'
+			});
+			
+			// Compose the frontend configuration object.
 			var frontendConfig = {
 				layout_url: config.baseUrl + 'layout',
-				data_hostnames: config.dataHostnames
+				data_hostnames: config.dataHostnames,
+				dashboard_template: dashboardTemplateHtml
 			};
+			
+			// Respond with the configuration.
 			var responseJson = {
 				config: frontendConfig
 			};
