@@ -40,23 +40,30 @@ function init() {
 		 * that resolve to the backend to fool the browser's domain connection limit.
 		 */
 		loadConfig: function () {
-			// Load the config from the backend:
-			var configUrl = '/config.json';
+			// Load the config from the backend.
+			// The backend should guarantee `pathname` to have a trailing slash.
+			var baseUrl = window.location.pathname;
+			var configUrl = baseUrl + 'config.json';
 			
 			$.ajax({
 				url: configUrl,
 				dataType: 'json'
 			}).then(function (response) {
 				config = _.extend({
-					layout_url: '/layout',
+					layout_url: null,
 					data_hostnames: []
 				}, response && response.config);
+				
+				if (!config.layout_url) {
+					logger.error(logPrefix + 'Empty "layout_url" in config from ' + configUrl + ':', config);
+					window.alert('Got invalid config from ' + configUrl + '.');
+					return;
+				}
 				
 				backendApi.loadLayout();
 			}, function (jqXHR) {
 				logger.error(logPrefix + 'Failed to load config from ' + configUrl + ':', jqXHR);
-				
-				global.alert('An error occurred while loading config from ' + configUrl + '.');
+				window.alert('An error occurred while loading config from ' + configUrl + '.');
 			});
 		},
 		
@@ -82,8 +89,7 @@ function init() {
 				}
 			}, function (jqXHR) {
 				logger.error(logPrefix + 'Failed to load layout from ' + layoutUrl + ':', jqXHR);
-				
-				global.alert('An error occurred while loading layout from ' + layoutUrl + '.');
+				window.alert('An error occurred while loading layout from ' + layoutUrl + '.');
 			});
 		},
 		
@@ -109,8 +115,7 @@ function init() {
 				}
 			}, function (jqXHR) {
 				logger.error(logPrefix + 'Failed to load meta from ' + metaUrlFull + ':', jqXHR);
-				
-				global.alert('An error occurred while loading meta from ' + metaUrlFull + '.');
+				window.alert('An error occurred while loading meta from ' + metaUrlFull + '.');
 			});
 		},
 		
