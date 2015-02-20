@@ -35,8 +35,8 @@ function init() {
 	var backendApi = {
 		/**
 		 * Loads the config from the backend, then loads the layout.
-		 * The config includes "layoutUrl" which is the base for other URLs.
-		 * The config includes "dataHostnames" which is an array of hostnames 
+		 * The config includes "layout_url" which is the base for other URLs.
+		 * The config includes "data_hostnames" which is an array of hostnames 
 		 * that resolve to the backend to fool the browser's domain connection limit.
 		 */
 		loadConfig: function () {
