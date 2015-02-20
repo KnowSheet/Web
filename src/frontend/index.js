@@ -26,6 +26,16 @@ var logPrefix = '[frontend] ';
 logger.log(logPrefix + 'Loaded at ' + (new Date()));
 
 
+/**
+ * Copies all HTMl attributes from one DOM node to another.
+ */
+function copyHtmlAttributes(srcEl, dstEl) {
+	for (var atts = srcEl.attributes, ic = atts.length, i = 0; i < ic; ++i) {
+		dstEl.setAttribute(atts[i].nodeName, atts[i].nodeValue);
+	}
+}
+
+
 function init() {
 	var dispatcher = new EventEmitter();
 	
@@ -35,9 +45,13 @@ function init() {
 	var backendApi = {
 		/**
 		 * Loads the config from the backend, then loads the layout.
-		 * The config includes "layout_url" which is the base for other URLs.
-		 * The config includes "data_hostnames" which is an array of hostnames 
-		 * that resolve to the backend to fool the browser's domain connection limit.
+		 * The config includes:
+		 * - {string} layout_url The URL of the dashboard layout, the base for other URLs.
+		 * - {Array.<string>} [data_hostnames] An array of hostnames that resolve to
+		 *     the backend to fool the browser's domain connection limit.
+		 * - {string} [dashboard_template] The HTML template of the dashboard (full HTML document).
+		 *     Replaces the current HTMl document contents. Should contain an HTML element
+		 *     with `knsh-dashboard-root` class. May also contain CSS styles and JS scripts.
 		 */
 		loadConfig: function () {
 			// Load the config from the backend.
@@ -51,7 +65,8 @@ function init() {
 			}).then(function (response) {
 				config = _.extend({
 					layout_url: null,
-					data_hostnames: []
+					data_hostnames: [],
+					dashboard_template: ''
 				}, response && response.config);
 				
 				if (!config.layout_url) {
@@ -59,6 +74,34 @@ function init() {
 					window.alert('Got invalid config from ' + configUrl + '.');
 					return;
 				}
+				
+				if (config.dashboard_template) {
+					// Parse the HTML template string into a DOM document.
+					var templateDocument = window.document.implementation.createHTMLDocument('');
+					templateDocument.open();
+					templateDocument.write(config.dashboard_template);
+					templateDocument.close();
+					
+					// Prepare to move elements from the template to the current document.
+					var $src = $(templateDocument);
+					var $srcHead = $src.find('head');
+					var $srcBody = $src.find('body');
+					
+					var $dst = $(window.document);
+					var $dstHead = $dst.find('head');
+					var $dstBody = $dst.find('body');
+					
+					// Move the template elements to the current document.
+					$dstHead.append( $srcHead.contents() );
+					$dstBody.empty().append( $srcBody.contents() );
+					
+					// Copy the attribute values on the root elements.
+					copyHtmlAttributes($srcHead[0], $dstHead[0]);
+					copyHtmlAttributes($srcBody[0], $dstBody[0]);
+				}
+				
+				// The `knsh-dashboard-root` element comes from the `dashboard_template`.
+				dashboard.mount( $('.knsh-dashboard-root') );
 				
 				backendApi.loadLayout();
 			}, function (jqXHR) {
@@ -222,8 +265,6 @@ function init() {
 		getLayoutStore: function () { return dashboardLayoutStore; }
 	}, {
 	});
-	
-	dashboard.mount( $('body').addClass('knsh-root') );
 	
 	$(global).on('load resize orientationchange', _.throttle(function () {
 		dispatcher.emit('resize-window');
