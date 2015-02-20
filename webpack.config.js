@@ -12,7 +12,8 @@ var webpackConfig = {
 	context: __dirname,
 	output: {
 		path: path.join(__dirname, (isProduction ? "build" : "build-dev")),
-		publicPath: "/static/",
+		// Use a relative `publicPath` to be able to serve from a subdirectory.
+		publicPath: "static/",
 		filename: "[name].js?[chunkhash]"
 	},
 	entry: {

@@ -13,13 +13,25 @@ var logger = require('./logger');
 
 module.exports = {
 	start: function (config) {
+		// Normalize the `baseUrl` to have both leading and trailing slashes.
+		config.baseUrl = config.baseUrl.replace(/\/+$/, '') + '/';
+		config.baseUrl = '/' + config.baseUrl.replace(/^\/+/, '');
+		
 		var logic = require('./logic')(config);
 		
 		var app = express(http.createServer());
 		var appServer;
 		
-		app.use(config.staticBaseUrl, serveStatic(config.staticPath));
-		app.get('/', function (req, res) {
+		app.use(config.baseUrl + 'static', serveStatic(config.staticPath));
+		
+		app.get(config.baseUrl, function (req, res) {
+			if (!/\/$/.test(req.path)) {
+				// Redirect from a URL without a trailing slash to the URL with it.
+				// This guarantees that the relative URLs in HTML are resolved correctly.
+				res.redirect(config.baseUrl);
+				return;
+			}
+			
 			res.sendFile('index.html', {
 				root: config.staticPath
 			});
@@ -29,7 +41,7 @@ module.exports = {
 		// Maintain a hash of all connected sockets:
 		var sockets = {}, nextSocketId = 0;
 		var appServerRestarting = false;
-		app.get('/_restart', cors(), function (req, res) {
+		app.get(config.baseUrl + '_restart', cors(), function (req, res) {
 			res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 			
 			if (appServerRestarting) {
@@ -71,9 +83,9 @@ module.exports = {
 		// DEBUG */
 		
 		// Provide the config from the backend:
-		app.get('/config.json', cors(), function (req, res) {
+		app.get(config.baseUrl + 'config.json', cors(), function (req, res) {
 			var frontendConfig = {
-				layout_url: '/layout',
+				layout_url: config.baseUrl + 'layout',
 				data_hostnames: config.dataHostnames
 			};
 			var responseJson = {
@@ -83,7 +95,7 @@ module.exports = {
 			res.json(responseJson);
 		});
 		
-		app.get('/layout', cors(), function (req, res) {
+		app.get(config.baseUrl + 'layout', cors(), function (req, res) {
 			var responseJson = {
 				layout: logic.getLayout()
 			};
@@ -91,7 +103,7 @@ module.exports = {
 			res.json(responseJson);
 		});
 		
-		app.get('/layout/meta', cors(), function (req, res) {
+		app.get(config.baseUrl + 'layout/meta', cors(), function (req, res) {
 			var responseJson = {
 				meta: logic.getMeta(req.query)
 			};
@@ -101,7 +113,7 @@ module.exports = {
 		
 		var nextStreamIndex = 0;
 		
-		app.get('/layout/data', cors(), function (req, res) {
+		app.get(config.baseUrl + 'layout/data', cors(), function (req, res) {
 			++nextStreamIndex;
 			
 			var streamLogPrefix = '';
