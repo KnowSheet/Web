@@ -22,8 +22,9 @@ function ValueVisualizer(locator, options, dataUrl) {
 	}, options);
 	
 	var blockCssClass = 'knsh-value-visualizer';
+	var additionalCssClasses = ' ' + require('../util-css-classes')(_this._options.css_classes);
 	
-	var $el = _this.$el = $('<div class="' + blockCssClass + '">' +
+	var $el = _this.$el = $('<div class="' + blockCssClass + additionalCssClasses + '">' +
 		'<div class="' + blockCssClass + '__header"></div>' +
 		'<div class="' + blockCssClass + '__wrapper">' +
 			'<div class="' + blockCssClass + '__figure"></div>' +

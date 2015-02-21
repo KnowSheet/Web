@@ -80,7 +80,8 @@ _.extend(DashboardLayout.prototype, {
 		
 		_this._traverseLayout(_this._layout, {},
 			function (ctx, layout) {
-				var $layout = layout.$layout = $('<div class="knsh-dashboard-layout-group"></div>');
+				var $layout = layout.$layout = $('<div class="knsh-dashboard-layout-group ' +
+					require('./util-css-classes')(layout.css_classes) + '"></div>');
 				
 				if (layout.row) {
 					$layout.addClass('knsh-dashboard-layout-group__m-row');
@@ -100,7 +101,8 @@ _.extend(DashboardLayout.prototype, {
 				$item.appendTo(layout.$items);
 				
 				if (cell) {
-					var $card = cell.$card = $('<div class="knsh-dashboard-layout-card"></div>');
+					var $card = cell.$card = $('<div class="knsh-dashboard-layout-card ' +
+						require('./util-css-classes')(cell.css_classes) + '"></div>');
 					
 					$card.appendTo($item);
 				}
