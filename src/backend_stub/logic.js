@@ -245,9 +245,13 @@ module.exports = function (config) {
 		return '/data?meta_id=' + metaId + '&series_id=' + seriesId;
 	}
 	
-	function makeLayoutCell(metaId) {
+	function makeLayoutCell(metaId, options) {
 		return {
 			cell: {
+				css_classes: {
+					'knsh-theme-popout': options && options.isPopout,
+					'knsh-theme-accented': options && options.isAccented
+				},
 				meta_url: makeMetaUrl(metaId)
 			}
 		};
@@ -313,6 +317,7 @@ module.exports = function (config) {
 				data_url: makeDataUrl('data' + i, 'data' + i),
 				visualizer_name: 'plot-visualizer',
 				visualizer_options: {
+					css_classes: 'knsh-theme-accented',
 					header_text: 'Data ' + i,
 					color: 'blue',
 					min: 0.0,
@@ -329,6 +334,7 @@ module.exports = function (config) {
 				col: [
 					// --- Basic layout ---
 					{
+						css_classes: 'knsh-theme-accented',
 						row: [
 							makeLayoutCell('1'),
 							makeLayoutCell('2'),
@@ -342,18 +348,31 @@ module.exports = function (config) {
 					// The same data stream:
 					{
 						row: [
-							makeLayoutCell('data0'),
-							makeLayoutCell('data0'),
-							makeLayoutCell('data0'),
-							makeLayoutCell('data0'),
-							makeLayoutCell('data0')
+							makeLayoutCell('data0', {
+								isPopout: true
+							}),
+							makeLayoutCell('data0', {
+								isPopout: true
+							}),
+							makeLayoutCell('data0', {
+								isPopout: true
+							}),
+							makeLayoutCell('data0', {
+								isPopout: true
+							}),
+							makeLayoutCell('data0', {
+								isPopout: true
+							})
 						]
 					},
 					
 					// Different data streams:
 					{
 						row: [
-							makeLayoutCell('data0'),
+							makeLayoutCell('data0', {
+								isPopout: true,
+								isAccented: true
+							}),
 							makeLayoutCell('data1'),
 							makeLayoutCell('data2'),
 							makeLayoutCell('data3'),

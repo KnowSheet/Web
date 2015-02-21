@@ -118,9 +118,11 @@
 		
 		.knsh-theme .knsh-dashboard-layout-card {
 			border: 1px solid #FFFFFF;
-			
 			background: #FFFFFF;
-			
+			color: #000000;
+		}
+		
+		.knsh-theme .knsh-dashboard-layout-card.knsh-theme-popout {
 			-webkit-box-shadow: 0 0 0 0 rgba(0,0,0,0);
 			box-shadow: 0 0 0 0 rgba(0,0,0,0);
 			
@@ -144,10 +146,13 @@
 			-webkit-border-radius: 0px;
 			border-radius: 0px;
 		}
-		.knsh-theme .knsh-dashboard-layout-card:hover {
+		
+		.knsh-theme .knsh-dashboard-layout-card.knsh-theme-popout:hover {
 			z-index: 1;
 			
-			border-color: #E2E2E2;
+			border-color: #EDEDED;
+			background: #FFFFFF;
+			color: #000000;
 			
 			-webkit-transform: scale(1.03);
 			-moz-transform: scale(1.03);
@@ -165,6 +170,28 @@
 			-ms-transition-delay: 0.3s;
 			-o-transition-delay: 0.3s;
 			transition-delay: 0.3s;
+		}
+		
+		.knsh-theme .knsh-dashboard-layout-group.knsh-theme-accented .knsh-dashboard-layout-card {
+			border-color: #263238;
+			background: #263238;
+			color: #FFFFFF;
+		}
+		
+		.knsh-theme .knsh-dashboard-layout-card.knsh-theme-accented,
+		.knsh-theme .knsh-dashboard-layout-card.knsh-theme-accented:hover {
+			border-color: #263238;
+			background: #263238;
+			color: #FFFFFF;
+		}
+		
+		.knsh-theme .knsh-dashboard-layout-group.knsh-theme-accented .knsh-dashboard-layout-card .knsh-value-visualizer__figure,
+		.knsh-theme .knsh-dashboard-layout-card.knsh-theme-accented .knsh-value-visualizer__figure {
+			text-shadow: 
+				1px 0px 0px #FFFFFF,
+				-1px 0px 0px #FFFFFF,
+				0px 1px 0px #FFFFFF,
+				0px -1px 0px #FFFFFF;
 		}
 		
 		.knsh-theme .knsh-image-visualizer__wrapper {
