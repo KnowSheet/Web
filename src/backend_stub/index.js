@@ -87,7 +87,7 @@ module.exports = {
 			// Read the dashboard template from the file.
 			// TODO(sompylasar): Build templates from HTML and LESS instead of the single HTML+CSS file.
 			// TODO(sompylasar): Personalized templates (?).
-			var dashboardTemplateHtml = require('fs').readFileSync(__dirname + '/dashboard-template.html', {
+			var dashboardTemplateHtml = require('fs').readFileSync(__dirname + '/../templates/knowsheet-demo.html', {
 				encoding: 'utf8'
 			});
 			
