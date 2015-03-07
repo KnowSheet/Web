@@ -54,11 +54,22 @@ function init() {
 		 *     with `knsh-dashboard-root` class. May also contain CSS styles and JS scripts.
 		 */
 		loadConfig: function () {
-			// Load the config from the backend.
-			// The backend should guarantee `pathname` to have a trailing slash.
+			// Obtain the base URL of the dashboard.
 			var baseUrl = window.location.pathname;
-			var configUrl = baseUrl + 'config.json';
 			
+			// The backend must guarantee the base URL to have a trailing slash,
+			// otherwise there could be issues with relative URL resolution done by
+			// the browser (e.g. from the stylesheets).
+			if (baseUrl.lastIndexOf('/') !== baseUrl.length-1) {
+				logger.error(logPrefix + 'The base path must have a trailing slash: ' + baseUrl);
+				window.alert('The base path must have a trailing slash: ' + baseUrl);
+				return;
+			}
+			
+			// Build the config URL.
+			var configUrl = baseUrl + 'config';
+			
+			// Load the config from the backend.
 			$.ajax({
 				url: configUrl,
 				dataType: 'json'
@@ -99,10 +110,16 @@ function init() {
 					copyHtmlAttributes($srcHead[0], $dstHead[0]);
 					copyHtmlAttributes($srcBody[0], $dstBody[0]);
 				}
+				else {
+					// The empty template is not a critical error, we'll use the default.
+					logger.error(logPrefix + 'Empty "dashboard_template" in config from ' + configUrl + ':', config);
+				}
 				
 				// The `knsh-dashboard-root` element comes from the `dashboard_template`.
+				// If the template is empty, the element from the default HTML is used.
 				dashboard.mount( $('.knsh-dashboard-root') );
 				
+				// Load the layout after the dashboard is mounted to the template.
 				backendApi.loadLayout();
 			}, function (jqXHR) {
 				logger.error(logPrefix + 'Failed to load config from ' + configUrl + ':', jqXHR);
@@ -112,8 +129,15 @@ function init() {
 		
 		/**
 		 * Loads the layout via the URL from the config.
+		 * The config must be loaded before.
 		 */
 		loadLayout: function () {
+			if (!config) {
+				logger.error(logPrefix + 'The config is not loaded.');
+				window.alert('The config is not loaded.');
+				return;
+			}
+			
 			var layoutUrl = config.layout_url;
 			
 			$.ajax({
@@ -138,8 +162,15 @@ function init() {
 		
 		/**
 		 * Loads the metadata for a single layout cell.
+		 * The config must be loaded before.
 		 */
 		loadMeta: function (metaUrl) {
+			if (!config) {
+				logger.error(logPrefix + 'The config is not loaded.');
+				window.alert('The config is not loaded.');
+				return;
+			}
+			
 			var metaUrlFull = config.layout_url + metaUrl;
 			
 			$.ajax({
@@ -166,8 +197,15 @@ function init() {
 		 * Connects to the data stream with a persistent connection
 		 * and triggers updates when new data arrives.
 		 * Uses "dataHostnames" to find the hostname to connect to.
+		 * The config must be loaded before.
 		 */
 		streamData: function (dataUrl, timeInterval) {
+			if (!config) {
+				logger.error(logPrefix + 'The config is not loaded.');
+				window.alert('The config is not loaded.');
+				return;
+			}
+			
 			var stopping = false;
 			
 			if (typeof timeInterval !== 'number' || timeInterval < 0) {
