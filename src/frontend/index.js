@@ -239,7 +239,8 @@ function init() {
 			persistentConnection.on('end', reconnectOnError);
 			persistentConnection.on('error', reconnectOnError);
 			
-			jsonPerLineParser.on('data', function (data) {
+			jsonPerLineParser.on('data', function (input_data) {
+				var data = (input_data ? (input_data.point || input_data) : input_data);
 				if (data && typeof data.x === 'number') {
 					// Advance the time that will go in the next request
 					// to the latest data sample time.
