@@ -239,13 +239,14 @@ function init() {
 			persistentConnection.on('end', reconnectOnError);
 			persistentConnection.on('error', reconnectOnError);
 			
-			jsonPerLineParser.on('data', function (inputData) {
-				var data = (inputData ? (inputData.point || inputData) : inputData);
-				if (data && typeof data.x === 'number') {
+			jsonPerLineParser.on('data', function (data) {
+				// Support both raw '{"x":1,"y":2}' and Bricks' '{"point":{"x":1,"y":2}}'.
+				var point = (data ? (data.point || data) : data);
+				if (point && typeof point.x === 'number') {
 					// Advance the time that will go in the next request
 					// to the latest data sample time.
 					// HACK: Add a small number to avoid last point duplicate.
-					queryParams.since = data.x + 1e-3;
+					queryParams.since = point.x + 1e-3;
 					persistentConnection.setUrl(
 						queryStringUtil.extend(
 							persistentConnection.getUrl(),
@@ -256,11 +257,11 @@ function init() {
 					// Notify that the data has been received:
 					dispatcher.emit('receive-data', {
 						dataUrl: dataUrl,
-						data: [ data ]
+						data: [ point ]
 					});
 				}
 				else {
-					logger.error(logPrefix + ' [' + dataUrl + '] Invalid data format:', inputData);
+					logger.error(logPrefix + ' [' + dataUrl + '] Invalid data format:', data);
 				}
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
