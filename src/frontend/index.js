@@ -259,6 +259,9 @@ function init() {
 						data: [ data ]
 					});
 				}
+				else {
+					logger.error(logPrefix + ' [' + dataUrl + '] Invalid data format:', input_data);
+				}
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
 			
