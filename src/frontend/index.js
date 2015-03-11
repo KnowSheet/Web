@@ -89,9 +89,7 @@ function init() {
 				if (config.dashboard_template) {
 					// Parse the HTML template string into a DOM document.
 					var templateDocument = window.document.implementation.createHTMLDocument('');
-					templateDocument.open();
-					templateDocument.write(config.dashboard_template);
-					templateDocument.close();
+					templateDocument.documentElement.innerHTML = config.dashboard_template;
 					
 					// Prepare to move elements from the template to the current document.
 					var $src = $(templateDocument);
