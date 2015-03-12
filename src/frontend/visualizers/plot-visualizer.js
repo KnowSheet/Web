@@ -60,14 +60,17 @@ _.extend(PlotVisualizer.prototype, {
 		
 		_this.$header.text( _this._options.header_text );
 		
+		// The series object is reused on plot updates, keeping the reference to the data.
+		_this._series = [
+			{
+				color: _this._options.color,
+				data: _this._data
+			}
+		];
+		
 		_this._flot = flot(
 			_this.$plot[0],
-			[
-				{
-					color: _this._options.color,
-					data: _this._data
-				}
-			],
+			_this._series,
 			{
 				series: {
 					lines: { show: true },
@@ -163,7 +166,7 @@ _.extend(PlotVisualizer.prototype, {
 			_this._flot.getOptions().xaxes[0].min = xMin;
 			_this._flot.getOptions().xaxes[0].max = xMax;
 			_this._flot.setupGrid();
-			_this._flot.setData([ plotData ]);
+			_this._flot.setData(_this._series);
 			_this._flot.draw();
 		}
 	},
