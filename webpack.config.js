@@ -77,9 +77,9 @@ var webpackConfig = {
 		alias: {
 			"jquery": path.join(__dirname, "node_modules/jquery/dist/" + (isProduction ? "jquery.min.js" : "jquery.js")),
 			
-			"flot": path.join(__dirname, "node_modules/Flot/" + (isProduction ? "jquery.flot.min.js" : "jquery.flot.js")),
-			"flot-plugin-resize": path.join(__dirname, "node_modules/Flot/" + (isProduction ? "jquery.flot.resize.min.js" : "jquery.flot.resize.js")),
-			"flot-plugin-time": path.join(__dirname, "node_modules/Flot/" + (isProduction ? "jquery.flot.time.min.js" : "jquery.flot.time.js")),
+			"flot": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.js")),
+			"flot-plugin-resize": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.resize.js")),
+			"flot-plugin-time": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.time.js")),
 			
 			"prefixer.less": path.join(__dirname, "src/frontend/vendor/prefixer.less"),
 			"flexbox.less": path.join(__dirname, "src/frontend/vendor/flexbox.less")
@@ -110,12 +110,7 @@ if (isProduction) {
 		}),
 		new webpack.optimize.DedupePlugin(),
 		new webpack.optimize.UglifyJsPlugin({
-			sourceMap: false,
-			mangle: {
-				except: [
-					"$super" //< "rickshaw" module uses "$super" for inheritance.
-				]
-			}
+			sourceMap: false
 		})
 	);
 }
