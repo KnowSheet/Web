@@ -335,7 +335,7 @@ function init() {
 	}, {
 	});
 	
-	$(global).on('load resize orientationchange', _.throttle(function () {
+	$(global).on('resize orientationchange', _.throttle(function () {
 		dispatcher.emit('resize-window');
 	}, 50));
 	
