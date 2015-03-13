@@ -3,7 +3,10 @@
 var $ = require('jquery');
 var _ = require('underscore');
 
-var Rickshaw = require('rickshaw');
+var flot = require('flot');
+require('flot-plugin-resize');
+require('flot-plugin-time');
+
 var moment = require('moment');
 
 require('./plot-visualizer.less');
@@ -57,52 +60,43 @@ _.extend(PlotVisualizer.prototype, {
 		
 		_this.$header.text( _this._options.header_text );
 		
-		var graph = _this._graph = new Rickshaw.Graph({
-			element: _this.$plot[0],
-			width: _this.$plot.width(),
-			height: _this.$plot.height(),
-			renderer: _this._options.renderer,
-			preserve: true,
-			series: [
-				{
-					color: _this._options.color,
-					data: _this._data
-				}
-			],
-			min: _this._options.min,
-			max: _this._options.max,
-			interpolation: _this._options.interpolation
-		});
-		
-		var ticksTreatment = 'glow';
-		
-		var xAxisTimeUnit = _this._xAxisTimeUnit = {
-			seconds: _this._getTimeTickInterval(),
-			formatter: function (d) {
-				return moment(d).format(_this._options.tick_format);
+		// The series object is reused on plot updates, keeping the reference to the data.
+		_this._series = [
+			{
+				color: _this._options.color,
+				data: _this._data
 			}
-		};
+		];
 		
-		var xAxis = _this._xAxis = new Rickshaw.Graph.Axis.Time({
-			graph: graph,
-			ticksTreatment: ticksTreatment,
-			timeUnit: xAxisTimeUnit
-		});
+		_this._flot = flot(
+			_this.$plot[0],
+			_this._series,
+			{
+				series: {
+					lines: { show: true },
+					points: { show: true },
+					shadowSize: 0	// Drawing is faster without shadows
+				},
+				xaxis: {
+					mode: "time",
+					tickFormatter: function (d) {
+						return moment(d).format(_this._options.tick_format);
+					}
+				},
+				yaxis: {
+					min: _this._options.min,
+					max: _this._options.max
+				},
+				legend: {
+					show: true
+				}
+			}
+		);
 		
-		var yAxis = _this._yAxis = new Rickshaw.Graph.Axis.Y({
-			graph: graph,
-			tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-			ticksTreatment: ticksTreatment
-		});
-		
-		_this._updateSize();
 		_this._renderPlot();
 		_this._renderData();
 		
-		_this._layoutStore.on('layout-resized', _this._layoutResizedListener = function () {
-			_this._updateSize();
-			_this._renderPlot();
-		});
+		// The plot is resized automagically via CSS and the `flot-plugin-resize` module, no need for handling the `layout-resized` event and resizing manually.
 		
 		_this._dataStore.on('data-updated', _this._dataUpdatedListener = function (args) {
 			if (!args || !args.dataUrl || args.dataUrl === _this._dataUrl) {
@@ -114,48 +108,20 @@ _.extend(PlotVisualizer.prototype, {
 	componentWillUnmount: function () {
 		var _this = this;
 		
-		_this._layoutStore.removeListener('layout-resized', _this._layoutResizedListener);
-		_this._layoutResizedListener = null;
-		
 		_this._dataStore.removeListener('data-updated', _this._dataUpdatedListener);
 		_this._dataUpdatedListener = null;
 		
+		_this._flot.shutdown();
+		_this._flot = null;
+		
 		_this.$plot.empty();
 		_this.$header.empty();
-		
-		_this._graph = null;
-		_this._xAxis = null;
-		_this._xAxisTimeUnit = null;
-		_this._yAxis = null;
 	},
 	
 	_renderPlot: function () {
 		var _this = this;
 		
-		_this._renderTimeTicks();
-		
-		_this._graph.render();
-		_this._xAxis.render();
-		_this._yAxis.render();
-	},
-	
-	_updateSize: function () {
-		var _this = this;
-		
-		var $plotWrapper = _this.$plotWrapper;
-		var $plot = _this.$plot;
-		
-		$plot.hide();
-		
-		_this._plotWidth = $plotWrapper.width();
-		_this._plotHeight = $plotWrapper.height();
-		
-		_this._graph.configure({
-			width: _this._plotWidth,
-			height: _this._plotHeight
-		});
-		
-		$plot.show();
+		_this._flot.draw();
 	},
 	
 	_renderData: function () {
@@ -169,7 +135,8 @@ _.extend(PlotVisualizer.prototype, {
 			var selectedData = [],
 				ic = seriesData.length,
 				i = ic-1,
-				timeInterval = _this._options.time_interval;
+				timeInterval = _this._options.time_interval,
+				xMin, xMax;
 			
 			// Add new data:
 			while (i >= 0) {
@@ -189,61 +156,18 @@ _.extend(PlotVisualizer.prototype, {
 			
 			_this._stubData();
 			
-			// Convert to seconds (Rickshaw requires this time format):
-			plotData.forEach(function (point) {
-				point.x /= 1000;
+			// Convert to arrays (flot required this structure):
+			plotData.forEach(function (point, index) {
+				plotData[index] = [ point.x, point.y ];
+				if (point.x < xMin || xMin === undefined) { xMin = point.x; }
+				if (point.x > xMax || xMax === undefined) { xMax = point.x; }
 			});
 			
-			_this._renderTimeTicks();
-			
-			_this._graph.render();
-		}
-	},
-	
-	_getTimeTickInterval: function () {
-		var _this = this;
-		
-		var plotData = _this._data;
-		
-		var timeIntervalDefault = 10 * 1000;
-		
-		var timeInterval = (typeof _this._options.time_interval === 'number'
-			? _this._options.time_interval
-			: (plotData.length >= 2
-				? ((plotData[plotData.length-1].x - plotData[0].x) * 1000)
-				: timeIntervalDefault
-			)
-		);
-		
-		var tickCount = _this._options.tick_count;
-		
-		// HACK: If the space between ticks is too small, let there be one tick per plot.
-		var minWidthBetweenTicksInPixels = 70;
-		if (
-			_this._plotWidth > 0 &&
-			(_this._plotWidth / tickCount) < minWidthBetweenTicksInPixels
-		) {
-			tickCount = 1;
-		}
-		
-		var chartTickInterval = Math.ceil((timeInterval / 1000) / tickCount);
-		
-		return chartTickInterval;
-	},
-	
-	_renderTimeTicks: function () {
-		var _this = this,
-			chartTickInterval;
-		
-		if (_this._xAxisTimeUnit) {
-			chartTickInterval = _this._getTimeTickInterval();
-			if (chartTickInterval !== _this._xAxisTimeUnit.seconds) {
-				_this._xAxisTimeUnit.seconds = chartTickInterval;
-				
-				if (_this._xAxis) {
-					_this._xAxis.render();
-				}
-			}
+			_this._flot.getOptions().xaxes[0].min = xMin;
+			_this._flot.getOptions().xaxes[0].max = xMax;
+			_this._flot.setupGrid();
+			_this._flot.setData(_this._series);
+			_this._flot.draw();
 		}
 	},
 	

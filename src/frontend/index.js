@@ -89,9 +89,7 @@ function init() {
 				if (config.dashboard_template) {
 					// Parse the HTML template string into a DOM document.
 					var templateDocument = window.document.implementation.createHTMLDocument('');
-					templateDocument.open();
-					templateDocument.write(config.dashboard_template);
-					templateDocument.close();
+					templateDocument.documentElement.innerHTML = config.dashboard_template;
 					
 					// Prepare to move elements from the template to the current document.
 					var $src = $(templateDocument);
@@ -128,6 +126,48 @@ function init() {
 		},
 		
 		/**
+		 * Patches the passed URL with the next hostname from the config, if available.
+		 *
+		 * @param {string} url The URL to patch.
+		 * @return {string} The URL with the hostname replaced, or the initial URL if the hostnames are not available.
+		 */
+		cycleHostname: function (url) {
+			if (!config) {
+				logger.error(logPrefix + 'The config is not loaded.');
+				window.alert('The config is not loaded.');
+				return;
+			}
+			
+			var dataHostnames = config.data_hostnames;
+			
+			// If the hostnames array is not available, the URL is not modified.
+			if (dataHostnames && dataHostnames.length > 0) {
+				// Check and, if required, reset the selected hostname index.
+				if (dataHostnamesRoundRobin >= dataHostnames.length) {
+					dataHostnamesRoundRobin = 0;
+				}
+				
+				// Parse the passed URL into components.
+				var dataUrlParsed = URL.parse(url);
+				
+				// Set the hostname to the selected one.
+				dataUrlParsed.hostname = dataHostnames[dataHostnamesRoundRobin];
+				
+				// Set the protocol and port, they are required if the hostname is set.
+				dataUrlParsed.protocol = dataUrlParsed.protocol || window.location.protocol;
+				dataUrlParsed.port = dataUrlParsed.port || window.location.port;
+				
+				// Combine into a string.
+				url = URL.format(dataUrlParsed);
+				
+				// Advance to the next hostname.
+				dataHostnamesRoundRobin++;
+			}
+			
+			return url;
+		},
+		
+		/**
 		 * Loads the layout via the URL from the config.
 		 * The config must be loaded before.
 		 */
@@ -139,6 +179,8 @@ function init() {
 			}
 			
 			var layoutUrl = config.layout_url;
+			
+			layoutUrl = backendApi.cycleHostname(layoutUrl);
 			
 			$.ajax({
 				url: layoutUrl,
@@ -172,6 +214,8 @@ function init() {
 			}
 			
 			var metaUrlFull = config.layout_url + metaUrl;
+			
+			metaUrlFull = backendApi.cycleHostname(metaUrlFull);
 			
 			$.ajax({
 				url: metaUrlFull,
@@ -268,25 +312,7 @@ function init() {
 			
 			var dataUrlFull = config.layout_url + dataUrl;
 			
-			// Use the next hostname from the config, if available.
-			var dataUrlParsed = URL.parse(dataUrlFull);
-			var dataHostnames = config.data_hostnames;
-			if (
-				dataHostnames && dataHostnames.length > 0
-				&& (dataUrlParsed.hostname === 'localhost' || (
-					!dataUrlParsed.hostname
-					&& window.location.hostname === 'localhost'
-				))
-			) {
-				dataUrlParsed.protocol = dataUrlParsed.protocol || window.location.protocol;
-				dataUrlParsed.hostname = dataHostnames[dataHostnamesRoundRobin];
-				dataUrlParsed.port = dataUrlParsed.port || window.location.port;
-				dataHostnamesRoundRobin++;
-				if (dataHostnamesRoundRobin >= dataHostnames.length) {
-					dataHostnamesRoundRobin = 0;
-				}
-				dataUrlFull = URL.format(dataUrlParsed);
-			}
+			dataUrlFull = backendApi.cycleHostname(dataUrlFull);
 			
 			persistentConnection.connect(dataUrlFull, queryParams);
 			
@@ -309,7 +335,7 @@ function init() {
 	}, {
 	});
 	
-	$(global).on('load resize orientationchange', _.throttle(function () {
+	$(global).on('resize orientationchange', _.throttle(function () {
 		dispatcher.emit('resize-window');
 	}, 50));
 	

@@ -12,17 +12,24 @@
 	
 	&__header {
 		padding: 10px 10px 6px;
+		
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 	}
 	
 	&__plot-wrapper {
 		.box-sizing(border-box);
 		
-		min-height: 100px;
-		
 		padding: 10px;
+		padding-top: 0;
 	}
 	
 	&__plot {
+		.box-sizing(border-box);
+		
+		height: 200px;
+		
 		overflow: hidden;
 		
 		background: rgba(0,150,255,0.1);

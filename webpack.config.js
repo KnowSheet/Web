@@ -22,9 +22,11 @@ var webpackConfig = {
 			"jquery",
 			"underscore",
 			"node-event-emitter",
-			"d3",
-			"rickshaw",
-			"rickshaw-css",
+			
+			"flot",
+			"flot-plugin-resize",
+			"flot-plugin-time",
+			
 			"moment"
 		]
 	},
@@ -37,20 +39,47 @@ var webpackConfig = {
 			}
 		],
 		loaders: [
-			{ test: /\.json$/i, loader: "json-loader" },
-			{ test: /\.less$/i, loader: "style-loader!css-loader!less-loader" },
-			{ test: /\.css$/i, loader: "style-loader!css-loader" },
-			{ test: /\.(jpe?g|png|gif)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" },
-			{ test: /\.(mp3|ac3|ogg|m4a)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" },
-			{ test: /\.(ttf|woff|eot)$/i, loader: "file-loader?name=[path][name].[ext]?[hash]" }
+			{
+				test: /jquery\.(\.min)?\.js$/,
+				loader: "exports-loader?jQuery.noConflict(true)"
+			},
+			{
+				test: /jquery\.flot(\.min)?\.js$/,
+				loader: "imports-loader?jQuery=jquery,this=>global!exports-loader?jQuery.plot"
+			},
+			{
+				test: /jquery\.flot(\.[a-z]+)(\.min)?\.js$/,
+				loader: "imports-loader?jQuery=jquery,this=>global!exports-loader?jQuery.plot"
+			},
+			{
+				test: /\.json$/i,
+				loader: "json-loader"
+			},
+			{
+				test: /\.less$/i,
+				loader: "style-loader!css-loader!less-loader"
+			},
+			{
+				test: /\.css$/i,
+				loader: "style-loader!css-loader"
+			},
+			{
+				test: /\.(jpe?g|png|gif)$/i,
+				loader: "file-loader?name=[path][name].[ext]?[hash]"
+			},
+			{
+				test: /\.(ttf|woff|eot)$/i,
+				loader: "file-loader?name=[path][name].[ext]?[hash]"
+			}
 		]
 	},
 	resolve: {
 		alias: {
 			"jquery": path.join(__dirname, "node_modules/jquery/dist/" + (isProduction ? "jquery.min.js" : "jquery.js")),
-			"d3": path.join(__dirname, "node_modules/d3/" + (isProduction ? "d3.min.js" : "d3.js")),
-			"rickshaw": path.join(__dirname, "node_modules/rickshaw/" + (isProduction ? "rickshaw.min.js" : "rickshaw.js")),
-			"rickshaw-css": path.join(__dirname, "node_modules/rickshaw/" + (isProduction ? "rickshaw.min.css" : "rickshaw.css")),
+			
+			"flot": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.js")),
+			"flot-plugin-resize": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.resize.js")),
+			"flot-plugin-time": path.join(__dirname, "node_modules/Flot/" + ("jquery.flot.time.js")),
 			
 			"prefixer.less": path.join(__dirname, "src/frontend/vendor/prefixer.less"),
 			"flexbox.less": path.join(__dirname, "src/frontend/vendor/flexbox.less")
@@ -81,12 +110,7 @@ if (isProduction) {
 		}),
 		new webpack.optimize.DedupePlugin(),
 		new webpack.optimize.UglifyJsPlugin({
-			sourceMap: false,
-			mangle: {
-				except: [
-					"$super" //< "rickshaw" module uses "$super" for inheritance.
-				]
-			}
+			sourceMap: false
 		})
 	);
 }
