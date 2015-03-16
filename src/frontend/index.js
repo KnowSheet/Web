@@ -157,6 +157,11 @@ function init() {
 				dataUrlParsed.protocol = dataUrlParsed.protocol || window.location.protocol;
 				dataUrlParsed.port = dataUrlParsed.port || window.location.port;
 				
+				// Invalidate composite properties to use
+				// the updated `hostname`, `protocol` and `port`.
+				dataUrlParsed.host = null;
+				dataUrlParsed.href = null;
+				
 				// Combine into a string.
 				url = URL.format(dataUrlParsed);
 				
