@@ -250,6 +250,10 @@ function init() {
 				return;
 			}
 			
+			var dataUrlFull = config.layout_url + dataUrl;
+			
+			dataUrlFull = backendApi.cycleHostname(dataUrlFull);
+			
 			var stopping = false;
 			
 			if (typeof timeInterval !== 'number' || timeInterval < 0) {
@@ -298,6 +302,16 @@ function init() {
 						)
 					);
 					
+					// The data point looks like a URL (is a string, starts with a slash).
+					if (typeof point.y === 'string'
+						&& point.y.indexOf('/') === 0
+						&& point.y.indexOf('//') !== 0  //< Not a protocol-relative URL.
+					) {
+						// Treat it like relative to the data URL.
+						// WARNING: Be careful not to put query strings into data URLs.
+						point.y = backendApi.cycleHostname(dataUrlFull + point.y);
+					}
+					
 					// Notify that the data has been received:
 					dispatcher.emit('receive-data', {
 						dataUrl: dataUrl,
@@ -309,10 +323,6 @@ function init() {
 				}
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
-			
-			var dataUrlFull = config.layout_url + dataUrl;
-			
-			dataUrlFull = backendApi.cycleHostname(dataUrlFull);
 			
 			persistentConnection.connect(dataUrlFull, queryParams);
 			
