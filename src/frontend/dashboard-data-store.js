@@ -68,8 +68,7 @@ _.extend(DashboardDataStore.prototype, {
 	_handleMeta: function (args) {
 		var _this = this,
 			meta = args.meta,
-			dataUrl = meta.data_url,
-			timeInterval = (meta.visualizer_options && meta.visualizer_options.time_interval);
+			dataUrl = meta.data_url;
 		
 		// WARNING: The frontend assumes unique data URLs.
 		
@@ -81,7 +80,7 @@ _.extend(DashboardDataStore.prototype, {
 		
 		// Start a data stream if not yet started:
 		if (!_this._streams[dataUrl]) {
-			_this._streams[dataUrl] = _this._backendApi.streamData(dataUrl, timeInterval);
+			_this._streams[dataUrl] = _this._backendApi.streamData(meta);
 		}
 		
 		// Notify that the new data set has appeared: 
