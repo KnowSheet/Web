@@ -248,26 +248,40 @@ function init() {
 		 * Uses "dataHostnames" to find the hostname to connect to.
 		 * The config must be loaded before.
 		 */
-		streamData: function (dataUrl, timeInterval) {
+		streamData: function (meta) {
 			if (!config) {
 				logger.error(logPrefix + 'The config is not loaded.');
 				window.alert('The config is not loaded.');
 				return;
 			}
 			
+			var dataUrl = meta.data_url;
 			var dataUrlFull = config.layout_url + dataUrl;
-			
 			dataUrlFull = backendApi.cycleHostname(dataUrlFull);
 			
-			var stopping = false;
 			
-			if (typeof timeInterval !== 'number' || timeInterval < 0) {
-				timeInterval = 0;
+			var time_interval = (meta.visualizer_options && meta.visualizer_options.time_interval);
+			if (typeof time_interval !== 'number' || time_interval < 0) {
+				time_interval = 0;
 			}
 			
-			var queryParams = {
-				since: ((new Date()).getTime() - timeInterval)
-			};
+			var n_min = (meta.visualizer_options && meta.visualizer_options.n_min);
+			if (typeof n_min !== 'number' || n_min < 0) {
+				n_min = 0;
+			}
+			
+			
+			var queryParams = {};
+			
+			if (n_min > 0) {
+				queryParams.n_min = n_min;
+			}
+			if (time_interval > 0) {
+				queryParams.recent = time_interval;
+			}
+			
+			
+			var stopping = false;
 			
 			var persistentConnection = new PersistentConnection({
 				logPrefix: 	logPrefix + ' [' + dataUrl + '] [PersistentConnection] '
@@ -296,17 +310,6 @@ function init() {
 				// Support both raw '{"x":1,"y":2}' and Bricks' '{"point":{"x":1,"y":2}}'.
 				var point = (data ? (data.point || data) : data);
 				if (point && typeof point.x === 'number') {
-					// Advance the time that will go in the next request
-					// to the latest data sample time.
-					// HACK: Add a small number to avoid last point duplicate.
-					queryParams.since = point.x + 1e-3;
-					persistentConnection.setUrl(
-						queryStringUtil.extend(
-							persistentConnection.getUrl(),
-							queryParams
-						)
-					);
-					
 					// The data point looks like a URL (is a string, starts with a slash).
 					if (typeof point.y === 'string'
 						&& point.y.indexOf('/') === 0
@@ -329,7 +332,12 @@ function init() {
 			});
 			jsonPerLineParser.on('error', reconnectOnError);
 			
-			persistentConnection.connect(dataUrlFull, queryParams);
+			persistentConnection.connect(
+				queryStringUtil.extend(
+					dataUrlFull,
+					queryParams
+				)
+			);
 			
 			return {
 				stop: function () {

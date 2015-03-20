@@ -171,7 +171,7 @@ module.exports = {
 			
 			
 			stream = logic.streamData(req.query, function (data) {
-				logger.info(streamLogPrefix + 'Sending a sample: ' + JSON.stringify(data));
+				logger.info(streamLogPrefix + 'Sending: ' + JSON.stringify(data));
 				
 				writeJson(data);
 			}, {

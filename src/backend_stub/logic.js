@@ -18,35 +18,33 @@ function DataStream() {
 }
 inherits(DataStream, EventEmitter);
 _.extend(DataStream.prototype, {
-	/**
-	 * @param {number} since The value of `x` to get the data since.
-	 */
-	getDataSince: function (since) {
+	replayData: function () {
 		var _this = this,
-			filteredData = [],
 			storedData = _this._data,
 			ic = storedData.length,
-			i = ic-1;
+			i = 0;
 		
-		while (i >= 0) {
-			if (storedData[i].x >= since) {
-				filteredData.unshift(storedData[i]);
-			}
-		
-			--i;
+		while (i < ic) {
+			_this.emit('entry', storedData[i]);
+			++i;
 		}
-		
-		return filteredData;
 	},
 	addData: function (updateData) {
 		var _this = this,
-			storedData = _this._data;
+			storedData = _this._data,
+			i = 0,
+			entry;
 		
 		if (storedData && updateData && updateData.length) {
 			storedData.push.apply(storedData, updateData);
+			
+			while (i < updateData.length) {
+				entry = updateData[i];
+				++i;
+				
+				_this.emit('entry', entry);
+			}
 		}
-		
-		_this.emit('data');
 	}
 });
 
@@ -142,37 +140,52 @@ _.extend(Reader.prototype, {
 	/**
 	 * @param {number} since The value of `x` to get the data since.
 	 */
-	start: function (since) {
+	start: function (params) {
 		var _this = this;
 		
 		if (_this._dataHandler) {
 			_this.stop();
 		}
 		
-		_this._since = since;
+		var recent = parseInt(params.recent, 10);
+		var from_timestamp = (!isNaN(recent) ? Date.now() - recent : 0);
 		
-		_this._dataHandler = function () {
-			var dataSince = _this._dataStream.getDataSince(_this._since);
-			
-			if (dataSince.length > 0) {
-				// HACK: Add a small number to avoid last point duplicate.
-				_this._since = dataSince[dataSince.length - 1].x + 1e-3;
-				
-				_this.emit('data', dataSince);
+		_this._from_timestamp = from_timestamp;
+		
+		_this._n_min = parseInt(params.n_min, 10);
+		if (isNaN(_this._n_min)) {
+			_this._n_min = 0;
+		}
+		
+		_this._n_max = parseInt(params.n_max, 10);
+		if (isNaN(_this._n_max)) {
+			_this._n_max = 0;
+		}
+		
+		_this._entryHandler = function (entry) {
+			// Assume the entry structure is `{"x":timestamp,"y":value}`.
+			if (entry.x >= _this._from_timestamp || _this._n_min > 0) {
+				_this.emit('entry', entry);
+				--_this._n_min;
+				if (_this._n_max > 0) {
+					--_this._n_max;
+					if (_this._n_max <= 0) {
+						_this.stop();
+					}
+				}
 			}
 		};
 		
-		_this._dataHandler();
-		
-		_this._dataStream.on('data', _this._dataHandler);
+		_this._dataStream.on('entry', _this._entryHandler);
+		_this._dataStream.replayData();
 	},
 	stop: function () {
 		var _this = this;
 		
-		if (!_this._dataHandler) { return; }
+		if (!_this._entryHandler) { return; }
 		
-		_this._dataStream.removeListener('data', _this._dataHandler);
-		_this._dataHandler = null;
+		_this._dataStream.removeListener('entry', _this._entryHandler);
+		_this._entryHandler = null;
 	}
 });
 
@@ -266,7 +279,8 @@ module.exports = function (config) {
 				color: 'purple',
 				min: 0.0,
 				max: 1.0,
-				time_interval: 10 * 1000
+				time_interval: 10 * 1000,
+				n_min: 2
 			}
 		},
 		"2": {
@@ -276,7 +290,8 @@ module.exports = function (config) {
 				header_text: 'Memory Footprint',
 				min: 0.0,
 				max: 1.0,
-				time_interval: 10 * 1000
+				time_interval: 10 * 1000,
+				n_min: 2
 			}
 		},
 		"3": {
@@ -287,7 +302,8 @@ module.exports = function (config) {
 				color: 'red',
 				min: 0.0,
 				max: 1.0,
-				time_interval: 20 * 1000
+				time_interval: 20 * 1000,
+				n_min: 2
 			}
 		},
 		"4": {
@@ -297,7 +313,8 @@ module.exports = function (config) {
 				header_text: 'CPU Load Value',
 				min: 0.0,
 				max: 1.0,
-				time_interval: 1000
+				time_interval: 1000,
+				n_min: 1
 			}
 		},
 		"lorempixel": {
@@ -306,7 +323,8 @@ module.exports = function (config) {
 			visualizer_options: {
 				header_text: 'Random Images from lorempixel.com',
 				empty_text: 'No image.',
-				time_interval: 10000
+				time_interval: 1000,
+				n_min: 1
 			}
 		}
 	};
@@ -322,7 +340,8 @@ module.exports = function (config) {
 					color: 'blue',
 					min: 0.0,
 					max: 1.0,
-					time_interval: TEST_DATA_STREAMS_COUNT * 1000
+					time_interval: TEST_DATA_STREAMS_COUNT * 1000,
+					n_min: 2
 				}
 			};
 		}
@@ -395,32 +414,25 @@ module.exports = function (config) {
 		
 		streamData: function (params, writeFn, options) {
 			var seriesId = params.series_id;
-			var since = params.since;
 			
 			var dataStream = _dataStreams[seriesId];
 			if (!dataStream) {
 				throw new Error('Stream ' + seriesId + ' not found.');
 			}
 			
-			// Assume all streams are time-based:
-			since = since || Date.now();
+			var streamLogPrefix = (options && options.logPrefix ? options.logPrefix : '[' + seriesId + '] ');
 			
-			var streamLogPrefix = (options && options.logPrefix ? options.logPrefix : '[' + seriesId + ';' + since + '] ');
-			
-			logger.info(streamLogPrefix + 'Requested stream since ' + since + '.');
+			logger.info(streamLogPrefix + 'Requested stream: ' + JSON.stringify(params));
 			
 			var reader = new Reader(dataStream);
 			
-			reader.on('data', function (data) {
-				logger.info(streamLogPrefix + 'Reading ' + data.length + ' samples.');
+			reader.on('entry', function (entry) {
+				logger.info(streamLogPrefix + 'Reader got an entry: ' + JSON.stringify(entry));
 				
-				// Send one top-level JSON object per data sample:
-				for (var ic = data.length, i = 0; i < ic; ++i) {
-					writeFn(data[i]);
-				}
+				writeFn({ "point": entry });
 			});
 			
-			reader.start(since);
+			reader.start(params);
 			
 			return {
 				stop: function () {

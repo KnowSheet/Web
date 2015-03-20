@@ -28,13 +28,16 @@ function decode(str) {
 function parse(queryString) {
 	var params = {}, pairs, pair, i, ic;
 
-	// Split into key/value pairs:
-	pairs = queryString.split('&');
+	// Return non-empty object only for non-empty query-string.
+	if (queryString) {
+		// Split into key/value pairs:
+		pairs = queryString.split('&');
 
-	// Convert the array of strings into an object:
-	for (i = 0, ic = pairs.length; i < ic; i++) {
-		pair = pairs[i].split('=');
-		params[decode(pair[0])] = decode(pair[1] || '');
+		// Convert the array of strings into an object:
+		for (i = 0, ic = pairs.length; i < ic; i++) {
+			pair = pairs[i].split('=');
+			params[decode(pair[0])] = decode(pair[1] || '');
+		}
 	}
 
 	return params;
