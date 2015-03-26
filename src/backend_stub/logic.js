@@ -209,15 +209,16 @@ var TEST_DATA_STREAMS_COUNT = 10;
 
 (function () {
 	function makeWriter(i, dataStream) {
-		var seed = Math.random();
+		// The following parameters are just magic numbers to make the streams look nice.
 		var index = 0;
-		new Writer(dataStream, (i + 1) * 200, function (callbackFn) {
+		var indexMax = 10;
+		var scale = Math.random();
+		var writeInterval = (i + 1) * 200;
+		
+		new Writer(dataStream, writeInterval, function (callbackFn) {
 			var now = Date.now();
-			callbackFn(now, Math.cos(index * (2 * Math.PI) / 10 - seed * 100));
-			++index;
-			if (index >= 10) {
-				index = 0;
-			}
+			callbackFn(now, scale * Math.cos((index / indexMax) * (2 * Math.PI)));
+			index = (index + 1) % indexMax;
 		}).start();
 	}
 	
