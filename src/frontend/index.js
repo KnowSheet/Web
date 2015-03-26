@@ -293,12 +293,12 @@ function init() {
 			var stopping = false;
 			
 			var persistentConnection = new PersistentConnectionPair({
-				logPrefix: 	logPrefix + ' [' + dataUrl + '] [PersistentConnectionPair] ',
+				logPrefix: logPrefix + ' [' + dataUrl + '] [PersistentConnectionPair] ',
 				bufferLimit: 5 * 1024
 			});
 			
 			var jsonPerLineParser = new JsonPerLineParser({
-				logPrefix: 	logPrefix + ' [' + dataUrl + '] [JsonPerLineParser] '
+				logPrefix: logPrefix + ' [' + dataUrl + '] [JsonPerLineParser] '
 			});
 			
 			persistentConnection.on('connected', handleNewConnection);
