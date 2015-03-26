@@ -138,8 +138,8 @@ _.extend(PersistentConnectionPair.prototype, {
 	
 	/**
 	 * Reconnects while having an active connection.
-	 * If there is an active connection, the reconnect happens with a delay.
-	 * If the delay is not needed, use `connect`.
+	 * If the connection has been once established, the reconnect happens with a delay;
+	 * otherwise immediately. If the delay is not needed, use `connect`.
 	 */
 	reconnect: function () {
 		var _this = this;
@@ -152,6 +152,9 @@ _.extend(PersistentConnectionPair.prototype, {
 			'back = [' + (_this._backIndex + 1) + '].');
 		
 		var conn = _this._connections[_this._backIndex].conn;
+		
+		// The `reconnect` with a delay only works if the URL was set before, i.e.
+		// the `connect` was called at least once on the current back connection.
 		if (conn.getUrl()) {
 			conn.reconnect();
 		}
