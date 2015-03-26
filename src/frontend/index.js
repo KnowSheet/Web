@@ -8,7 +8,7 @@ var URL = require('url');
 
 var queryStringUtil = require('./query-string-util');
 
-var PersistentConnection = require('./persistent-connection');
+var PersistentConnectionPair = require('./persistent-connection-pair');
 var JsonPerLineParser = require('./json-per-line-parser');
 
 var Dashboard = require('./dashboard');
@@ -280,36 +280,112 @@ function init() {
 				queryParams.recent = time_interval;
 			}
 			
+			// Randomize the limit to avoid simultaneous reconnects of multiple streams.
+			var dataLimit = Math.ceil(10 * 1024 * (1 + 0.2 * Math.random()));
 			
+			// Track the number of bytes received since last reconnect.
+			var dataReceived = 0;
+			
+			// Track and skip duplicate points by timestamp (the `x` value).
+			var lastDataPointX = 0;
+			
+			// If stopping, do not reconnect.
 			var stopping = false;
 			
-			var persistentConnection = new PersistentConnection({
-				logPrefix: 	logPrefix + ' [' + dataUrl + '] [PersistentConnection] '
+			var persistentConnection = new PersistentConnectionPair({
+				logPrefix: 	logPrefix + ' [' + dataUrl + '] [PersistentConnectionPair] ',
+				bufferLimit: 5 * 1024
 			});
 			
 			var jsonPerLineParser = new JsonPerLineParser({
 				logPrefix: 	logPrefix + ' [' + dataUrl + '] [JsonPerLineParser] '
 			});
 			
+			persistentConnection.on('connected', handleNewConnection);
+			persistentConnection.on('reconnected', handleNewConnection);
+			persistentConnection.on('data', handleConnectionData);
+			persistentConnection.on('end', reconnectOnError);
+			persistentConnection.on('error', reconnectOnError);
+			
+			jsonPerLineParser.on('data', handleParsedData);
+			jsonPerLineParser.on('error', reconnectOnError);
+			
+			persistentConnection.connect(
+				queryStringUtil.extend(
+					dataUrlFull,
+					queryParams
+				)
+			);
+			
+			
+			function reconnectOnDataLimit() {
+				if (
+					!stopping
+					&& !persistentConnection.isConnecting()
+					&& !persistentConnection.isReconnecting()
+				) {
+					logger.warn(logPrefix + ' [' + dataUrl + '] ' +
+						'Reconnect on data limit (' + dataReceived + ' >= ' + dataLimit + ').');
+					
+					// TODO(sompylasar): Adjust `recent` to avoid requesting the data that will be skipped upon receiving.
+					persistentConnection.connect(
+						backendApi.cycleHostname(persistentConnection.getUrl())
+					);
+				}
+			}
+			
 			function reconnectOnError() {
-				if (!stopping && !persistentConnection.isConnecting()) {
+				if (
+					!stopping
+					&& !persistentConnection.isConnecting()
+					&& !persistentConnection.isReconnecting()
+				) {
+					logger.warn(logPrefix + ' [' + dataUrl + '] ' +
+						'Reconnect on error.');
+					
 					persistentConnection.reconnect();
 				}
 			}
 			
-			persistentConnection.on('connected', function (data) {
+			function handleNewConnection() {
+				if (stopping) {
+					return;
+				}
+				
 				jsonPerLineParser.reset();
-			});
-			persistentConnection.on('data', function (data) {
-				jsonPerLineParser.write(data);
-			});
-			persistentConnection.on('end', reconnectOnError);
-			persistentConnection.on('error', reconnectOnError);
+				
+				dataReceived = 0;
+			}
 			
-			jsonPerLineParser.on('data', function (data) {
+			function handleConnectionData(data) {
+				jsonPerLineParser.write(data);
+				
+				dataReceived += data.length;
+				if (dataReceived >= dataLimit) {
+					reconnectOnDataLimit();
+				}
+			}
+			
+			function handleParsedData(data) {
 				// Support both raw '{"x":1,"y":2}' and Bricks' '{"point":{"x":1,"y":2}}'.
 				var point = (data ? (data.point || data) : data);
 				if (point && typeof point.x === 'number') {
+					if (lastDataPointX > 0 && point.x <= lastDataPointX) {
+						// Skip overlapping.
+						if (false) {
+							logger.warn(logPrefix + ' [' + dataUrl + '] ' +
+								'Skipped overlapping point (' + lastDataPointX + '): ' + JSON.stringify(point));
+						}
+						return;
+					}
+					
+					lastDataPointX = point.x;
+					
+					if (false) {
+						logger.log(logPrefix + ' [' + dataUrl + '] ' +
+							'Got point (' + lastDataPointX + '): ' + JSON.stringify(point));
+					}
+					
 					// The data point looks like a URL (is a string, starts with a slash).
 					if (typeof point.y === 'string'
 						&& point.y.indexOf('/') === 0
@@ -327,17 +403,10 @@ function init() {
 					});
 				}
 				else {
-					logger.error(logPrefix + ' [' + dataUrl + '] Invalid data format:', data);
+					logger.error(logPrefix + ' [' + dataUrl + '] Invalid data format: ' + data);
 				}
-			});
-			jsonPerLineParser.on('error', reconnectOnError);
+			}
 			
-			persistentConnection.connect(
-				queryStringUtil.extend(
-					dataUrlFull,
-					queryParams
-				)
-			);
 			
 			return {
 				stop: function () {

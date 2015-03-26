@@ -208,12 +208,22 @@ new Writer(_dataStreams['memory'], 1000, function (callbackFn) {
 var TEST_DATA_STREAMS_COUNT = 10;
 
 (function () {
+	function makeWriter(i, dataStream) {
+		var seed = Math.random();
+		var index = 0;
+		new Writer(dataStream, (i + 1) * 200, function (callbackFn) {
+			var now = Date.now();
+			callbackFn(now, Math.cos(index * (2 * Math.PI) / 10 - seed * 100));
+			++index;
+			if (index >= 10) {
+				index = 0;
+			}
+		}).start();
+	}
+	
 	for (var ic = TEST_DATA_STREAMS_COUNT, i = 0; i < ic; ++i) {
 		_dataStreams['data' + i] = new DataStream();
-		new Writer(_dataStreams['data' + i], (i + 1) * 1000, function (callbackFn) {
-			var now = Date.now();
-			callbackFn(now, Math.abs(0.6 * Math.cos(now) + 0.4 * Math.random()));
-		}).start();
+		makeWriter(i, _dataStreams['data' + i]);
 	}
 }());
 
@@ -338,7 +348,7 @@ module.exports = function (config) {
 					css_classes: 'knsh-theme-accented',
 					header_text: 'Data ' + i,
 					color: 'blue',
-					min: 0.0,
+					min: -1.0,
 					max: 1.0,
 					time_interval: TEST_DATA_STREAMS_COUNT * 1000,
 					n_min: 2
@@ -349,6 +359,19 @@ module.exports = function (config) {
 	
 	return {
 		getLayout: function () {
+			if (false) {
+				// DEBUG: Single plot layout with quickly updating data.
+				return {
+					col: [
+						{
+							row: [
+								makeLayoutCell('data0')
+							]
+						}
+					]
+				};
+			}
+			
 			var layout = {
 				col: [
 					// --- Basic layout ---
