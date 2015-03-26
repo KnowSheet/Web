@@ -289,6 +289,18 @@ _.extend(PersistentConnectionPair.prototype, {
 	},
 	
 	_onConnError: function (descriptor, error) {
+		this._handleConnErrorOrEnd(descriptor, error);
+	},
+	
+	_onConnEnd: function (descriptor) {
+		this._handleConnErrorOrEnd(descriptor);
+	},
+	
+	/**
+	 * @param {Object} descriptor
+	 * @param {Error|undefined} error
+	 */
+	_handleConnErrorOrEnd: function (descriptor, error) {
 		var _this = this;
 		if (descriptor.index === _this._frontIndex) {
 			_this._dropConnection(error);
@@ -296,21 +308,6 @@ _.extend(PersistentConnectionPair.prototype, {
 		else {
 			if (_this._isConnecting || _this._isReconnecting) {
 				_this._dropConnection(error);
-			}
-			else if (_this._isConnected) {
-				descriptor.conn.reconnect();
-			}
-		}
-	},
-	
-	_onConnEnd: function (descriptor) {
-		var _this = this;
-		if (descriptor.index === _this._frontIndex) {
-			_this._dropConnection();
-		}
-		else {
-			if (_this._isConnecting || _this._isReconnecting) {
-				_this._dropConnection();
 			}
 			else if (_this._isConnected) {
 				descriptor.conn.reconnect();
@@ -326,6 +323,9 @@ _.extend(PersistentConnectionPair.prototype, {
 		});
 	},
 	
+	/**
+	 * @param {Error|undefined} error
+	 */
 	_dropConnection: function (error) {
 		var _this = this;
 		

@@ -234,6 +234,9 @@ _.extend(PersistentConnection.prototype, {
 		xhr.send(null);
 	},
 	
+	/**
+	 * @param {Error|undefined} error
+	 */
 	_dropConnection: function (error) {
 		var _this = this;
 		
