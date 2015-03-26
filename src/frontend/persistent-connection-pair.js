@@ -42,8 +42,14 @@ function PersistentConnectionPair(options) {
 	_this._connections = [];
 	
 	[ 0, 1 ].forEach(function (index) {
+		var logPrefix;
+		
+		if (options.logPrefix) {
+			logPrefix = (options.logPrefix + '[' + (index + 1) + '] ');
+		}
+		
 		var conn = new PersistentConnection(_.extend({}, options, {
-			logPrefix: (options.logPrefix ? options.logPrefix + '[' + (index + 1) + '] ' : undefined)
+			logPrefix: logPrefix
 		}));
 		
 		var descriptor = {
