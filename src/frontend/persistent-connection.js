@@ -55,6 +55,13 @@ _.extend(PersistentConnection.prototype, {
 	},
 	
 	/**
+	 * @return {boolean}
+	 */
+	isReconnecting: function () {
+		return !!this._reconnectTimer;
+	},
+	
+	/**
 	 * Opens a persistent connection on a given URL.
 	 * The server is expected to keep the connection open forever and push the data.
 	 *
@@ -104,6 +111,8 @@ _.extend(PersistentConnection.prototype, {
 		
 		// Schedule a reconnect:
 		_this._reconnectTimer = setTimeout(function () {
+			_this._reconnectTimer = null;
+			
 			if (_this._isConnected) {
 				return;
 			}
@@ -225,6 +234,9 @@ _.extend(PersistentConnection.prototype, {
 		xhr.send(null);
 	},
 	
+	/**
+	 * @param {Error|undefined} error
+	 */
 	_dropConnection: function (error) {
 		var _this = this;
 		

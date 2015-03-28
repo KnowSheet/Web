@@ -208,12 +208,23 @@ new Writer(_dataStreams['memory'], 1000, function (callbackFn) {
 var TEST_DATA_STREAMS_COUNT = 10;
 
 (function () {
+	function makeWriter(i, dataStream) {
+		// The following parameters are just magic numbers to make the streams look nice.
+		var index = 0;
+		var indexMax = 10;
+		var scale = Math.random();
+		var writeInterval = (i + 1) * 200;
+		
+		new Writer(dataStream, writeInterval, function (callbackFn) {
+			var now = Date.now();
+			callbackFn(now, scale * Math.cos((index / indexMax) * (2 * Math.PI)));
+			index = (index + 1) % indexMax;
+		}).start();
+	}
+	
 	for (var ic = TEST_DATA_STREAMS_COUNT, i = 0; i < ic; ++i) {
 		_dataStreams['data' + i] = new DataStream();
-		new Writer(_dataStreams['data' + i], (i + 1) * 1000, function (callbackFn) {
-			var now = Date.now();
-			callbackFn(now, Math.abs(0.6 * Math.cos(now) + 0.4 * Math.random()));
-		}).start();
+		makeWriter(i, _dataStreams['data' + i]);
 	}
 }());
 
@@ -338,7 +349,7 @@ module.exports = function (config) {
 					css_classes: 'knsh-theme-accented',
 					header_text: 'Data ' + i,
 					color: 'blue',
-					min: 0.0,
+					min: -1.0,
 					max: 1.0,
 					time_interval: TEST_DATA_STREAMS_COUNT * 1000,
 					n_min: 2
@@ -349,6 +360,19 @@ module.exports = function (config) {
 	
 	return {
 		getLayout: function () {
+			if (false) {
+				// DEBUG: Single plot layout with quickly updating data.
+				return {
+					col: [
+						{
+							row: [
+								makeLayoutCell('data0')
+							]
+						}
+					]
+				};
+			}
+			
 			var layout = {
 				col: [
 					// --- Basic layout ---
